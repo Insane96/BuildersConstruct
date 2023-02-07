@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[40,)"
+license="All rights reserved"
+[[mods]]
+modId="tinkersconstruction"
+version="${file.jarVersion}"
+displayName="Example Mod"
+# logoFile="examplemod.png"# 
+# credits="Thanks for this example mod goes to Java"
+authors="Insane96MCP"
+description='''
+Tinkers' Construction is a mod that adds modifiers for wand to let you build faster
+'''
+
+[[dependencies.tinkersconstruction]]
+    modId="forge"
+    mandatory=true
+    versionRange="[40,)"
+    ordering="NONE"
+    side="BOTH"
+[[dependencies.tinkersconstruction]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.18.2,1.19)"
+    ordering="NONE"
+    side="BOTH"
