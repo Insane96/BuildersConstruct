@@ -24,3 +24,9 @@ Tinkers' Construction is a mod that adds modifiers for wand to let you build fas
     versionRange="[1.18.2,1.19)"
     ordering="NONE"
     side="BOTH"
+[[dependencies.tinkersconstruction]]
+    modId="tconstruct"
+    mandatory=true
+    versionRange="[3.6.2.103,)"
+    ordering="NONE"
+    side="BOTH"
