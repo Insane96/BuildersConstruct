@@ -2,6 +2,7 @@ package insane96mcp.tinkersconstruction.modifiers;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import insane96mcp.tinkersconstruction.TConstructionModifiers;
 import insane96mcp.tinkersconstruction.TinkersConstruction;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -34,6 +35,7 @@ import slimeknights.tconstruct.library.tools.definition.module.interaction.DualO
 import slimeknights.tconstruct.library.tools.helper.ToolDamageUtil;
 import slimeknights.tconstruct.library.tools.item.ModifiableItem;
 import slimeknights.tconstruct.library.tools.nbt.IToolStackView;
+import slimeknights.tconstruct.library.tools.nbt.ToolStack;
 import slimeknights.tconstruct.tools.TinkerModifiers;
 
 import java.util.*;
@@ -77,58 +79,13 @@ public class ConstructionModifier extends Modifier implements BlockInteractionMo
                     return InteractionResult.PASS;
 
                 int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
-                if (expandedLevel > EXPANDED_LEVEL_RANGE.length)
-                    expandedLevel = EXPANDED_LEVEL_RANGE.length - 1;
-                int placeableAmount = EXPANDED_LEVEL_RANGE[expandedLevel];
-                List<BlockPos> toCheck = new ArrayList<>();
-                toCheck.add(mainPos);
-                List<BlockPos> checked = new ArrayList<>();
-                int placed = 0;
-                while (!toCheck.isEmpty() && placed < placeableAmount) {
-                    List<BlockPos> newList = new ArrayList<>();
-                    for (BlockPos pos : toCheck) {
-                        if (level.setBlock(pos.relative(face), stateClicked, 3)) {
-                            placed++;
-                            for (Direction dir : DIRECTION_CLOCKWISE.get(face)){
-                                BlockPos newPos = pos.relative(dir);
-                                if (checked.contains(newPos) || !level.getBlockState(newPos).equals(stateClicked))
-                                    continue;
-                                newList.add(newPos);
-                            }
-                            if (placed >= placeableAmount) {
-                                break;
-                            }
-                        }
-                    }
-                    checked.addAll(toCheck);
-                    toCheck = new ArrayList<>(newList);
+                List<BlockPos> blocksToPlace = getBlocksToLay(level, mainPos, stateClicked, face, expandedLevel);
+                for (BlockPos pos : blocksToPlace) {
+                    pos = pos.relative(face);
+                    level.setBlock(pos, stateClicked, 3);
                 }
 
-                /*Direction clockWiseSide = face.getClockWise();
-                Direction counterClockWiseSide = face.getCounterClockWise();
-                int i = 0;
-                do {
-                    BlockPos pos;
-                    if (i % 2 == 0) {
-                        pos = context.getClickedPos().relative(clockWiseSide, (i + 1) / 2);
-                        if (level.getBlockState(pos).equals(stateClicked)) {
-                            if (level.setBlock(pos.relative(face), stateClicked, 3)) {
-                                placed++;
-                            }
-                        }
-                    }
-                    if (i % 2 == 1) {
-                        pos = context.getClickedPos().relative(counterClockWiseSide, (i + 1) / 2);
-                        if (level.getBlockState(pos).equals(stateClicked)) {
-                            if (level.setBlock(pos.relative(face), stateClicked, 3)) {
-                                placed++;
-                            }
-                        }
-                    }
-                    i++;
-                } while(placed < placeableAmount && i < 2048);
-*/
-                if (ToolDamageUtil.damage(tool, placed, player, context.getItemInHand()) && player != null) {
+                if (ToolDamageUtil.damage(tool, blocksToPlace.size(), player, context.getItemInHand()) && player != null) {
                     player.broadcastBreakEvent(source.getSlot(context.getHand()));
                 }
                 level.playSound(null, mainPos, stateClicked.getSoundType(level, mainPos, player).getPlaceSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
@@ -138,32 +95,71 @@ public class ConstructionModifier extends Modifier implements BlockInteractionMo
         return InteractionResult.PASS;
     }
 
+    public static List<BlockPos> getBlocksToLay(Level level, BlockPos mainPos, BlockState stateClicked, Direction face, int expandedLevel) {
+        if (expandedLevel > EXPANDED_LEVEL_RANGE.length)
+            expandedLevel = EXPANDED_LEVEL_RANGE.length - 1;
+        int placeableAmount = EXPANDED_LEVEL_RANGE[expandedLevel];
+        List<BlockPos> toCheck = new ArrayList<>();
+        toCheck.add(mainPos);
+
+        List<BlockPos> toPlace = new ArrayList<>();
+        while (!toCheck.isEmpty() && toPlace.size() < placeableAmount) {
+            List<BlockPos> newList = new ArrayList<>();
+            for (BlockPos pos : toCheck) {
+                for (Direction dir : DIRECTION_CLOCKWISE.get(face)){
+                    BlockPos newPos = pos.relative(dir);
+                    if (!level.getBlockState(newPos).equals(stateClicked)
+                            || toPlace.contains(newPos) || newList.contains(newPos)
+                            || !level.getBlockState(newPos.relative(face)).isAir()
+                            || level.isOutsideBuildHeight(newPos.relative(face)))
+                        continue;
+                    newList.add(newPos);
+                }
+                toPlace.add(pos);
+                if (toPlace.size() >= placeableAmount) {
+                    newList.clear();
+                    break;
+                }
+            }
+            toCheck = new ArrayList<>(newList);
+        }
+
+        return toPlace;
+    }
+
     @SubscribeEvent
     public static void onRenderLevelLast(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES
                 || !(event.getCamera().getEntity() instanceof LocalPlayer player)
                 || Minecraft.getInstance().hitResult == null
-                || Minecraft.getInstance().hitResult.getType() != HitResult.Type.BLOCK)
+                || Minecraft.getInstance().hitResult.getType() != HitResult.Type.BLOCK
+                || !(player.getMainHandItem().getItem() instanceof ModifiableItem))
             return;
 
-        if (player.getMainHandItem().getItem() instanceof ModifiableItem) {
-            Level level = player.getLevel();
-            BlockHitResult blockhitresult = (BlockHitResult)Minecraft.getInstance().hitResult;
-            Direction face = blockhitresult.getDirection();
-            BlockPos pos = blockhitresult.getBlockPos().relative(face);
-            BlockPos playerPos = player.blockPosition();
-            int dx = playerPos.getX() - pos.getX();
-            int dz = playerPos.getZ() - pos.getZ();
-            if ((dx * dx + dz * dz) < 512) {
-                VertexConsumer vertexBuilder = Minecraft.getInstance().renderBuffers().bufferSource().getBuffer(RenderType.LINES);
-                Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-                event.getPoseStack().translate(-cam.x, -cam.y, -cam.z);
-                event.getPoseStack().pushPose();
-                LevelRenderer.renderShape(event.getPoseStack(), vertexBuilder, Shapes.block(), pos.getX(), pos.getY(), pos.getZ(), 1f, 0f, 0f, 1.0f);
-                event.getPoseStack().popPose();
-                RenderSystem.disableDepthTest();
-                Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
-            }
+        ToolStack stack = ToolStack.from(player.getMainHandItem());
+        int construction = stack.getModifierLevel(TConstructionModifiers.CONSTRUCTION.get());
+        if (construction == 0)
+            return;
+        int expandedLevel = stack.getModifierLevel(TinkerModifiers.expanded.get());
+
+        Level level = player.getLevel();
+        BlockHitResult blockhitresult = (BlockHitResult)Minecraft.getInstance().hitResult;
+        Direction face = blockhitresult.getDirection();
+        BlockPos pos = blockhitresult.getBlockPos();
+        BlockState state = level.getBlockState(pos);
+        List<BlockPos> blocksToPlace = getBlocksToLay(level, pos, state, face, expandedLevel);
+        if (blocksToPlace.size() == 0)
+            return;
+        VertexConsumer vertexBuilder = Minecraft.getInstance().renderBuffers().bufferSource().getBuffer(RenderType.LINES);
+        Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        event.getPoseStack().pushPose();
+        event.getPoseStack().translate(-cam.x, -cam.y, -cam.z);
+        for (BlockPos blockPos : blocksToPlace) {
+            blockPos = blockPos.relative(face);
+            LevelRenderer.renderShape(event.getPoseStack(), vertexBuilder, Shapes.block(), blockPos.getX(), blockPos.getY(), blockPos.getZ(), 1f, 0.2f, 0.2f, 0.75f);
         }
+        event.getPoseStack().popPose();
+        RenderSystem.disableDepthTest();
+        Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
     }
 }

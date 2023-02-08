@@ -10,7 +10,7 @@ import slimeknights.tconstruct.library.modifiers.util.StaticModifier;
 public class TConstructionModifiers extends AbstractModifierProvider {
     public static final ModifierDeferredRegister MODIFIERS = ModifierDeferredRegister.create(TinkersConstruction.MOD_ID);
 
-    public static final StaticModifier<Modifier> voidingModifier = MODIFIERS.register("construction", ConstructionModifier::new);
+    public static final StaticModifier<Modifier> CONSTRUCTION = MODIFIERS.register("construction", ConstructionModifier::new);
 
     public TConstructionModifiers(DataGenerator generator) {
         super(generator);
