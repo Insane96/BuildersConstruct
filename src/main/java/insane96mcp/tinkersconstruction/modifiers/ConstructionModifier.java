@@ -11,9 +11,11 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -24,11 +26,12 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import slimeknights.tconstruct.library.modifiers.Modifier;
+import org.jetbrains.annotations.Nullable;
 import slimeknights.tconstruct.library.modifiers.ModifierEntry;
 import slimeknights.tconstruct.library.modifiers.TinkerHooks;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.BlockInteractionModifierHook;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.InteractionSource;
+import slimeknights.tconstruct.library.modifiers.impl.NoLevelsModifier;
 import slimeknights.tconstruct.library.modifiers.util.ModifierHookMap;
 import slimeknights.tconstruct.library.tools.definition.module.ToolModuleHooks;
 import slimeknights.tconstruct.library.tools.definition.module.interaction.DualOptionInteraction;
@@ -36,12 +39,13 @@ import slimeknights.tconstruct.library.tools.helper.ToolDamageUtil;
 import slimeknights.tconstruct.library.tools.item.ModifiableItem;
 import slimeknights.tconstruct.library.tools.nbt.IToolStackView;
 import slimeknights.tconstruct.library.tools.nbt.ToolStack;
+import slimeknights.tconstruct.library.utils.TooltipKey;
 import slimeknights.tconstruct.tools.TinkerModifiers;
 
 import java.util.*;
 
 @Mod.EventBusSubscriber(modid = TinkersConstruction.MOD_ID)
-public class ConstructionModifier extends Modifier implements BlockInteractionModifierHook {
+public class ConstructionModifier extends NoLevelsModifier implements BlockInteractionModifierHook {
 
     private static final int[] EXPANDED_LEVEL_RANGE = {5, 9, 16, 32, 64, 128, 256, 512, 1024, 2048};
 
@@ -161,5 +165,11 @@ public class ConstructionModifier extends Modifier implements BlockInteractionMo
         event.getPoseStack().popPose();
         RenderSystem.disableDepthTest();
         Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
+    }
+
+    @Override
+    public void addInformation(IToolStackView tool, int level, @Nullable Player player, List<Component> tooltip, TooltipKey tooltipKey, TooltipFlag tooltipFlag) {
+        int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
+        tooltip.add(applyStyle(new TranslatableComponent(getTranslationKey() + ".blocks_placed", EXPANDED_LEVEL_RANGE[expandedLevel])));
     }
 }
