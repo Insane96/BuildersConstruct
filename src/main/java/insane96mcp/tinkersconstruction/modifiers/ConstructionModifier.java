@@ -13,8 +13,10 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
@@ -74,22 +76,38 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
     public InteractionResult afterBlockUse(IToolStackView tool, ModifierEntry modifier, UseOnContext context, InteractionSource source) {
         if (tool.getCurrentDurability() > 1 && tool.getDefinitionData().getModule(ToolModuleHooks.INTERACTION).canInteract(tool, modifier.getId(), source)) {
             Player player = context.getPlayer();
+            if (player == null)
+                return InteractionResult.PASS;
             if (!context.getLevel().isClientSide) {
                 Level level = context.getLevel();
                 Direction face = context.getClickedFace();
                 BlockState stateClicked = level.getBlockState(context.getClickedPos());
+                Item blockItemClicked = stateClicked.getBlock().asItem();
                 BlockPos mainPos = context.getClickedPos();
                 if (!level.getBlockState(mainPos.relative(face)).isAir())
                     return InteractionResult.PASS;
 
                 int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
                 List<BlockPos> blocksToPlace = getBlocksToLay(level, mainPos, stateClicked, face, expandedLevel);
+                int blockCount;
+                if (player.isCreative())
+                    blockCount = -1;
+                else {
+                    blockCount = ContainerHelper.clearOrCountMatchingItems(player.getInventory(), itemStack -> itemStack.getItem().equals(blockItemClicked), 0, true);
+                }
+                if (blockCount == 0)
+                    return InteractionResult.PASS;
+                int placed = 0;
                 for (BlockPos pos : blocksToPlace) {
                     pos = pos.relative(face);
                     level.setBlock(pos, stateClicked, 3);
+                    placed++;
+                    if (placed == blockCount)
+                        break;
                 }
+                player.getInventory().clearOrCountMatchingItems(itemStack -> itemStack.getItem().equals(blockItemClicked), placed, player.getInventory());
 
-                if (ToolDamageUtil.damage(tool, blocksToPlace.size(), player, context.getItemInHand()) && player != null) {
+                if (ToolDamageUtil.damage(tool, blocksToPlace.size(), player, context.getItemInHand())) {
                     player.broadcastBreakEvent(source.getSlot(context.getHand()));
                 }
                 level.playSound(null, mainPos, stateClicked.getSoundType(level, mainPos, player).getPlaceSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
