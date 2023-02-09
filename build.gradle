@@ -105,13 +105,19 @@ dependencies {
     // Copypasted from materialis. Still no shame.
     implementation fg.deobf("slimeknights.mantle:Mantle:${mc_version}-${mantle_version}")
     implementation fg.deobf("slimeknights.tconstruct:TConstruct:${mc_version}-${tic_version}")
+
+    // compile against the JEI API but do not include it at runtime
+    compileOnly(fg.deobf("mezz.jei:jei-${mc_version}-common-api:${jei_version}"))
+    compileOnly(fg.deobf("mezz.jei:jei-${mc_version}-forge-api:${jei_version}"))
+    // at runtime, use the full JEI jar for Forge
+    runtimeOnly(fg.deobf("mezz.jei:jei-${mc_version}-forge:${jei_version}"))
 }
 
 // Example for how to get properties into the manifest for reading at runtime.
 jar {
     manifest {
         attributes([
-                "Specification-Title"     : "tinkersconstruction",
+                "Specification-Title": "tinkersconstruction",
                 "Specification-Vendor": "insane96mcp",
                 "Specification-Version": "1", // We are version 1 of ourselves
                 "Implementation-Title": project.name,

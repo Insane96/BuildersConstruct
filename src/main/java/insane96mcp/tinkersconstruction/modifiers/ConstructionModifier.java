@@ -136,11 +136,16 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES
                 || !(event.getCamera().getEntity() instanceof LocalPlayer player)
                 || Minecraft.getInstance().hitResult == null
-                || Minecraft.getInstance().hitResult.getType() != HitResult.Type.BLOCK
-                || !(player.getMainHandItem().getItem() instanceof ModifiableItem))
+                || Minecraft.getInstance().hitResult.getType() != HitResult.Type.BLOCK)
             return;
 
-        ToolStack stack = ToolStack.from(player.getMainHandItem());
+        ToolStack stack;
+        if (player.getMainHandItem().getItem() instanceof ModifiableItem)
+            stack = ToolStack.from(player.getMainHandItem());
+        else if (player.getOffhandItem().getItem() instanceof ModifiableItem)
+            stack = ToolStack.from(player.getOffhandItem());
+        else return;
+
         int construction = stack.getModifierLevel(TConstructionModifiers.CONSTRUCTION.get());
         if (construction == 0)
             return;

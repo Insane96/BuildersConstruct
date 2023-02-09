@@ -4,7 +4,7 @@ license="All rights reserved"
 [[mods]]
 modId="tinkersconstruction"
 version="${file.jarVersion}"
-displayName="Example Mod"
+displayName="Tinkers Construction Modifier"
 # logoFile="examplemod.png"# 
 # credits="Thanks for this example mod goes to Java"
 authors="Insane96MCP"
