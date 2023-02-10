@@ -11,10 +11,11 @@ import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.InteractionResult;
@@ -38,13 +39,11 @@ import slimeknights.tconstruct.library.modifiers.hook.interaction.BlockInteracti
 import slimeknights.tconstruct.library.modifiers.hook.interaction.InteractionSource;
 import slimeknights.tconstruct.library.modifiers.impl.NoLevelsModifier;
 import slimeknights.tconstruct.library.modifiers.util.ModifierHookMap;
-import slimeknights.tconstruct.library.tools.context.ToolRebuildContext;
 import slimeknights.tconstruct.library.tools.definition.module.ToolModuleHooks;
 import slimeknights.tconstruct.library.tools.definition.module.interaction.DualOptionInteraction;
 import slimeknights.tconstruct.library.tools.helper.ToolDamageUtil;
 import slimeknights.tconstruct.library.tools.item.ModifiableItem;
 import slimeknights.tconstruct.library.tools.nbt.IToolStackView;
-import slimeknights.tconstruct.library.tools.nbt.ModDataNBT;
 import slimeknights.tconstruct.library.tools.nbt.ToolStack;
 import slimeknights.tconstruct.library.utils.TooltipKey;
 import slimeknights.tconstruct.tools.TinkerModifiers;
@@ -57,7 +56,6 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
     private static final int[] EXPANDED_LEVEL_RANGE = {5, 9, 16, 32, 64, 128, 256, 512, 1024, 2048};
 
     private static final ResourceLocation MODE = new ResourceLocation(TinkersConstruction.MOD_ID, "construction_mode");
-    Modes mode = Modes.FILL;
 
     private static Map<Direction, List<Direction>> DIRECTION_CLOCKWISE;
 
@@ -75,21 +73,20 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         DIRECTION_CLOCKWISE.put(Direction.WEST, Arrays.asList(Direction.UP, Direction.NORTH, Direction.DOWN, Direction.SOUTH));
     }
 
-    @Override
-    public void addVolatileData(ToolRebuildContext context, int level, ModDataNBT volatileData) {
-        volatileData.putInt(MODE, mode.ordinal());
-    }
-
-    public void nextMode() {
-        int index = mode.ordinal();
+    public void nextMode(IToolStackView tool) {
+        int index = getMode(tool).ordinal();
         index++;
-        if (index >= Modes.values().length)
+        if (index >= Mode.values.length)
             index = 0;
-        this.mode = Modes.values()[index];
+        setMode(tool, Mode.values[index]);
     }
 
-    public Modes getMode() {
-        return this.mode;
+    public Mode getMode(IToolStackView tool) {
+        return Mode.values[tool.getPersistentData().getInt(MODE)];
+    }
+
+    public void setMode(IToolStackView tool, Mode mode) {
+        tool.getPersistentData().putInt(MODE, mode.ordinal());
     }
 
     @Override
@@ -101,46 +98,46 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
     public InteractionResult afterBlockUse(IToolStackView tool, ModifierEntry modifier, UseOnContext context, InteractionSource source) {
         if (tool.getCurrentDurability() > 1 && tool.getDefinitionData().getModule(ToolModuleHooks.INTERACTION).canInteract(tool, modifier.getId(), source)) {
             Player player = context.getPlayer();
-            if (player == null
-                || context.getLevel().isClientSide)
+            if (player == null)
                 return InteractionResult.PASS;
-            if (player.isCrouching()) {
-                this.nextMode();
-                player.sendMessage(new TextComponent("Looped to %s".formatted(this.mode)), Util.NIL_UUID);
-            }
-            else {
-                Level level = context.getLevel();
-                Direction face = context.getClickedFace();
-                BlockState stateClicked = level.getBlockState(context.getClickedPos());
-                Item blockItemClicked = stateClicked.getBlock().asItem();
-                BlockPos mainPos = context.getClickedPos();
-                if (!level.getBlockState(mainPos.relative(face)).isAir())
-                    return InteractionResult.PASS;
+            if (!context.getLevel().isClientSide) {
+                if (player.isCrouching()) {
+                    this.nextMode(tool);
+                    ((ServerPlayer)player).sendMessage(new TranslatableComponent(getTranslationKey() + ".mode_switch", this.getMode(tool)), ChatType.GAME_INFO, Util.NIL_UUID);
+                } else {
+                    Level level = context.getLevel();
+                    Direction face = context.getClickedFace();
+                    BlockState stateClicked = level.getBlockState(context.getClickedPos());
+                    Item blockItemClicked = stateClicked.getBlock().asItem();
+                    BlockPos mainPos = context.getClickedPos();
+                    if (!level.getBlockState(mainPos.relative(face)).isAir())
+                        return InteractionResult.PASS;
 
-                int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
-                List<BlockPos> blocksToPlace = getBlocksToLay(level, mainPos, stateClicked, face, expandedLevel, this.mode);
-                int blockCount;
-                if (player.isCreative())
-                    blockCount = -1;
-                else {
-                    blockCount = ContainerHelper.clearOrCountMatchingItems(player.getInventory(), itemStack -> itemStack.getItem().equals(blockItemClicked), 0, true);
-                }
-                if (blockCount == 0)
-                    return InteractionResult.PASS;
-                int placed = 0;
-                for (BlockPos pos : blocksToPlace) {
-                    pos = pos.relative(face);
-                    level.setBlock(pos, stateClicked, 3);
-                    placed++;
-                    if (placed == blockCount)
-                        break;
-                }
-                player.getInventory().clearOrCountMatchingItems(itemStack -> itemStack.getItem().equals(blockItemClicked), placed, player.getInventory());
+                    int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
+                    List<BlockPos> blocksToPlace = getBlocksToLay(level, mainPos, stateClicked, face, expandedLevel, this.getMode(tool));
+                    int blockCount;
+                    if (player.isCreative())
+                        blockCount = -1;
+                    else {
+                        blockCount = ContainerHelper.clearOrCountMatchingItems(player.getInventory(), itemStack -> itemStack.getItem().equals(blockItemClicked), 0, true);
+                    }
+                    if (blockCount == 0)
+                        return InteractionResult.PASS;
+                    int placed = 0;
+                    for (BlockPos pos : blocksToPlace) {
+                        pos = pos.relative(face);
+                        level.setBlock(pos, stateClicked, 3);
+                        placed++;
+                        if (placed == blockCount)
+                            break;
+                    }
+                    player.getInventory().clearOrCountMatchingItems(itemStack -> itemStack.getItem().equals(blockItemClicked), placed, player.getInventory());
 
-                if (ToolDamageUtil.damage(tool, blocksToPlace.size(), player, context.getItemInHand())) {
-                    player.broadcastBreakEvent(source.getSlot(context.getHand()));
+                    if (ToolDamageUtil.damage(tool, blocksToPlace.size(), player, context.getItemInHand())) {
+                        player.broadcastBreakEvent(source.getSlot(context.getHand()));
+                    }
+                    level.playSound(null, mainPos, stateClicked.getSoundType(level, mainPos, player).getPlaceSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
                 }
-                level.playSound(null, mainPos, stateClicked.getSoundType(level, mainPos, player).getPlaceSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
             }
 
             return InteractionResult.sidedSuccess(context.getLevel().isClientSide);
@@ -148,13 +145,15 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         return InteractionResult.PASS;
     }
 
-    enum Modes {
+    enum Mode {
         FILL,
         HORIZONTAL,
-        VERTICAL
+        VERTICAL;
+
+        public static final Mode[] values = Mode.values();
     }
 
-    public static List<BlockPos> getBlocksToLay(Level level, BlockPos mainPos, BlockState stateClicked, Direction face, int expandedLevel, Modes mode) {
+    public static List<BlockPos> getBlocksToLay(Level level, BlockPos mainPos, BlockState stateClicked, Direction face, int expandedLevel, Mode mode) {
         if (expandedLevel > EXPANDED_LEVEL_RANGE.length)
             expandedLevel = EXPANDED_LEVEL_RANGE.length - 1;
         int placeableAmount = EXPANDED_LEVEL_RANGE[expandedLevel];
@@ -236,7 +235,9 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         Direction face = blockhitresult.getDirection();
         BlockPos pos = blockhitresult.getBlockPos();
         BlockState state = level.getBlockState(pos);
-        List<BlockPos> blocksToPlace = getBlocksToLay(level, pos, state, face, expandedLevel, );
+        if (!level.getBlockState(pos.relative(face)).isAir())
+            return;
+        List<BlockPos> blocksToPlace = getBlocksToLay(level, pos, state, face, expandedLevel, Mode.values[stack.getPersistentData().getInt(MODE)]);
         if (blocksToPlace.size() == 0)
             return;
         VertexConsumer vertexBuilder = Minecraft.getInstance().renderBuffers().bufferSource().getBuffer(RenderType.LINES);
@@ -256,6 +257,6 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
     public void addInformation(IToolStackView tool, int level, @Nullable Player player, List<Component> tooltip, TooltipKey tooltipKey, TooltipFlag tooltipFlag) {
         int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
         tooltip.add(applyStyle(new TranslatableComponent(getTranslationKey() + ".blocks_placed", EXPANDED_LEVEL_RANGE[expandedLevel])));
-        tooltip.add(applyStyle(new TranslatableComponent(getTranslationKey() + ".mode", this.mode)));
+        tooltip.add(applyStyle(new TranslatableComponent(getTranslationKey() + ".mode", this.getMode(tool))));
     }
 }
