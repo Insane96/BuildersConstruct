@@ -18,6 +18,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -36,6 +37,7 @@ import org.jetbrains.annotations.Nullable;
 import slimeknights.tconstruct.library.modifiers.ModifierEntry;
 import slimeknights.tconstruct.library.modifiers.TinkerHooks;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.BlockInteractionModifierHook;
+import slimeknights.tconstruct.library.modifiers.hook.interaction.GeneralInteractionModifierHook;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.InteractionSource;
 import slimeknights.tconstruct.library.modifiers.impl.NoLevelsModifier;
 import slimeknights.tconstruct.library.modifiers.util.ModifierHookMap;
@@ -51,7 +53,7 @@ import slimeknights.tconstruct.tools.TinkerModifiers;
 import java.util.*;
 
 @Mod.EventBusSubscriber(modid = TinkersConstruction.MOD_ID)
-public class ConstructionModifier extends NoLevelsModifier implements BlockInteractionModifierHook {
+public class ConstructionModifier extends NoLevelsModifier implements BlockInteractionModifierHook, GeneralInteractionModifierHook {
 
     private static final int[] EXPANDED_LEVEL_RANGE = {5, 9, 16, 32, 64, 128, 256, 512, 1024, 2048};
 
@@ -62,7 +64,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
     @Override
     protected void registerHooks(ModifierHookMap.Builder hookBuilder) {
         super.registerHooks(hookBuilder);
-        hookBuilder.addHook(this, TinkerHooks.BLOCK_INTERACT);
+        hookBuilder.addHook(this, TinkerHooks.BLOCK_INTERACT, TinkerHooks.CHARGEABLE_INTERACT);
 
         DIRECTION_CLOCKWISE = new EnumMap<>(Direction.class);
         DIRECTION_CLOCKWISE.put(Direction.UP, Arrays.asList(Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST));
@@ -101,46 +103,55 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
             if (player == null)
                 return InteractionResult.PASS;
             if (!context.getLevel().isClientSide) {
-                if (player.isCrouching()) {
-                    this.nextMode(tool);
-                    ((ServerPlayer)player).sendMessage(new TranslatableComponent(getTranslationKey() + ".mode_switch", this.getMode(tool)), ChatType.GAME_INFO, Util.NIL_UUID);
-                } else {
-                    Level level = context.getLevel();
-                    Direction face = context.getClickedFace();
-                    BlockState stateClicked = level.getBlockState(context.getClickedPos());
-                    Item blockItemClicked = stateClicked.getBlock().asItem();
-                    BlockPos mainPos = context.getClickedPos();
-                    if (!level.getBlockState(mainPos.relative(face)).isAir())
-                        return InteractionResult.PASS;
+                Level level = context.getLevel();
+                Direction face = context.getClickedFace();
+                BlockState stateClicked = level.getBlockState(context.getClickedPos());
+                Item blockItemClicked = stateClicked.getBlock().asItem();
+                BlockPos mainPos = context.getClickedPos();
+                if (!level.getBlockState(mainPos.relative(face)).isAir())
+                    return InteractionResult.PASS;
 
-                    int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
-                    List<BlockPos> blocksToPlace = getBlocksToLay(level, mainPos, stateClicked, face, expandedLevel, this.getMode(tool));
-                    int blockCount;
-                    if (player.isCreative())
-                        blockCount = -1;
-                    else {
-                        blockCount = ContainerHelper.clearOrCountMatchingItems(player.getInventory(), itemStack -> itemStack.getItem().equals(blockItemClicked), 0, true);
-                    }
-                    if (blockCount == 0)
-                        return InteractionResult.PASS;
-                    int placed = 0;
-                    for (BlockPos pos : blocksToPlace) {
-                        pos = pos.relative(face);
-                        level.setBlock(pos, stateClicked, 3);
-                        placed++;
-                        if (placed == blockCount)
-                            break;
-                    }
-                    player.getInventory().clearOrCountMatchingItems(itemStack -> itemStack.getItem().equals(blockItemClicked), placed, player.getInventory());
-
-                    if (ToolDamageUtil.damage(tool, blocksToPlace.size(), player, context.getItemInHand())) {
-                        player.broadcastBreakEvent(source.getSlot(context.getHand()));
-                    }
-                    level.playSound(null, mainPos, stateClicked.getSoundType(level, mainPos, player).getPlaceSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
+                int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
+                List<BlockPos> blocksToPlace = getBlocksToLay(level, mainPos, stateClicked, face, expandedLevel, this.getMode(tool));
+                int blockCount;
+                if (player.isCreative())
+                    blockCount = -1;
+                else {
+                    blockCount = ContainerHelper.clearOrCountMatchingItems(player.getInventory(), itemStack -> itemStack.getItem().equals(blockItemClicked), 0, true);
                 }
+                if (blockCount == 0)
+                    return InteractionResult.PASS;
+                int placed = 0;
+                for (BlockPos pos : blocksToPlace) {
+                    pos = pos.relative(face);
+                    level.setBlock(pos, stateClicked, 3);
+                    placed++;
+                    if (placed == blockCount)
+                        break;
+                }
+                player.getInventory().clearOrCountMatchingItems(itemStack -> itemStack.getItem().equals(blockItemClicked), placed, player.getInventory());
+
+                if (ToolDamageUtil.damage(tool, blocksToPlace.size(), player, context.getItemInHand())) {
+                    player.broadcastBreakEvent(source.getSlot(context.getHand()));
+                }
+                level.playSound(null, mainPos, stateClicked.getSoundType(level, mainPos, player).getPlaceSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
             }
 
             return InteractionResult.sidedSuccess(context.getLevel().isClientSide);
+        }
+        return InteractionResult.PASS;
+    }
+
+    @Override
+    public InteractionResult onToolUse(IToolStackView tool, ModifierEntry modifier, Player player, InteractionHand hand, InteractionSource source) {
+        if (tool.getCurrentDurability() > 1) {
+            if (player.isCrouching()) {
+                if (!player.getLevel().isClientSide) {
+                    this.nextMode(tool);
+                    ((ServerPlayer) player).sendMessage(new TranslatableComponent(getTranslationKey() + ".mode_switch", this.getMode(tool)), ChatType.GAME_INFO, Util.NIL_UUID);
+                }
+                return InteractionResult.sidedSuccess(player.level.isClientSide);
+            }
         }
         return InteractionResult.PASS;
     }
@@ -231,7 +242,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         int expandedLevel = stack.getModifierLevel(TinkerModifiers.expanded.get());
 
         Level level = player.getLevel();
-        BlockHitResult blockhitresult = (BlockHitResult)Minecraft.getInstance().hitResult;
+        BlockHitResult blockhitresult = (BlockHitResult) Minecraft.getInstance().hitResult;
         Direction face = blockhitresult.getDirection();
         BlockPos pos = blockhitresult.getBlockPos();
         BlockState state = level.getBlockState(pos);
