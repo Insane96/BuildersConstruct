@@ -1,9 +1,9 @@
-package insane96mcp.tinkersconstruction.modifiers;
+package insane96mcp.buildersconstruct.modifiers;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import insane96mcp.tinkersconstruction.TConstructionModifiers;
-import insane96mcp.tinkersconstruction.TinkersConstruction;
+import insane96mcp.buildersconstruct.BCModifiers;
+import insane96mcp.buildersconstruct.BuildersConstruct;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -52,12 +52,12 @@ import slimeknights.tconstruct.tools.TinkerModifiers;
 
 import java.util.*;
 
-@Mod.EventBusSubscriber(modid = TinkersConstruction.MOD_ID)
+@Mod.EventBusSubscriber(modid = BuildersConstruct.MOD_ID)
 public class ConstructionModifier extends NoLevelsModifier implements BlockInteractionModifierHook, GeneralInteractionModifierHook {
 
     private static final int[] EXPANDED_LEVEL_RANGE = {5, 9, 16, 32, 64, 128, 256, 512, 1024, 2048};
 
-    private static final ResourceLocation MODE = new ResourceLocation(TinkersConstruction.MOD_ID, "construction_mode");
+    private static final ResourceLocation MODE = new ResourceLocation(BuildersConstruct.MOD_ID, "construction_mode");
 
     private static Map<Direction, List<Direction>> DIRECTION_CLOCKWISE;
 
@@ -227,7 +227,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
             stack = ToolStack.from(player.getOffhandItem());
         else return;
 
-        int construction = stack.getModifierLevel(TConstructionModifiers.CONSTRUCTION.get());
+        int construction = stack.getModifierLevel(BCModifiers.CONSTRUCTION.get());
         if (construction == 0)
             return;
         int expandedLevel = stack.getModifierLevel(TinkerModifiers.expanded.get());

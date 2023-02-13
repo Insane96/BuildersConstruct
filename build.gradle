@@ -19,8 +19,8 @@ apply plugin: 'net.minecraftforge.gradle'
 
 
 version = "${mod_version}-mc${mc_version}"
-group = 'insane96mcp.tinkersconstruction'
-archivesBaseName = 'TinkersConstruction'
+group = 'insane96mcp.buildersconstruct'
+archivesBaseName = 'BuildersConstruct'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
@@ -38,11 +38,11 @@ minecraft {
 
             property 'forge.logging.console.level', 'debug'
 
-            property 'forge.enabledGameTestNamespaces', 'tinkersconstruction'
+            property 'forge.enabledGameTestNamespaces', 'buildersconstruct'
             //args '-mixin.config=mobspropertiesrandomness.mixins.json'
 
             mods {
-                tinkersconstruction {
+                buildersconstruct {
                     source sourceSets.main
                 }
             }
@@ -55,12 +55,12 @@ minecraft {
 
             property 'forge.logging.console.level', 'debug'
 
-            property 'forge.enabledGameTestNamespaces', 'tinkersconstruction'
+            property 'forge.enabledGameTestNamespaces', 'buildersconstruct'
 
             //args '-mixin.config=mobspropertiesrandomness.mixins.json'
 
             mods {
-                tinkersconstruction {
+                buildersconstruct {
                     source sourceSets.main
                 }
             }
@@ -73,10 +73,10 @@ minecraft {
 
             property 'forge.logging.console.level', 'debug'
 
-            args '--mod', 'tinkersconstruction', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+            args '--mod', 'buildersconstruct', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
 
             mods {
-                tinkersconstruction {
+                buildersconstruct {
                     source sourceSets.main
                 }
             }
@@ -117,14 +117,14 @@ dependencies {
 jar {
     manifest {
         attributes([
-                "Specification-Title": "tinkersconstruction",
+                "Specification-Title": "buildersconstruct",
                 "Specification-Vendor": "insane96mcp",
                 "Specification-Version": "1", // We are version 1 of ourselves
                 "Implementation-Title": project.name,
                 "Implementation-Version": "${mod_version}",
                 "Implementation-Vendor" :"insane96mcp",
                 "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")/*,
-                "MixinConfigs": "tinkersconstruction.mixins.json"*/
+                "MixinConfigs": "buildersconstruct.mixins.json"*/
         ])
     }
 }

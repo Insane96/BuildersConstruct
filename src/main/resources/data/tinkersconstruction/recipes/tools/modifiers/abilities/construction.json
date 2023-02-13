@@ -27,7 +27,7 @@
     },
     "allow_crystal": true,
     "result": {
-        "name": "tinkersconstruction:construction",
+        "name": "buildersconstruct:construction",
         "level": 1
     },
     "max_level": 1

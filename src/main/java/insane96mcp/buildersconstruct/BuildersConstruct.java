@@ -1,4 +1,4 @@
-package insane96mcp.tinkersconstruction;
+package insane96mcp.buildersconstruct;
 
 import net.minecraft.data.DataGenerator;
 import net.minecraftforge.common.MinecraftForge;
@@ -8,16 +8,16 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.forge.event.lifecycle.GatherDataEvent;
 
-@Mod(TinkersConstruction.MOD_ID)
-public class TinkersConstruction
+@Mod(BuildersConstruct.MOD_ID)
+public class BuildersConstruct
 {
-    public static final String MOD_ID = "tinkersconstruction";
+    public static final String MOD_ID = "buildersConstruct";
     public static final String RESOURCE_PREFIX = MOD_ID + ":";
 
-    public TinkersConstruction() {
+    public BuildersConstruct() {
         //ModLoadingContext.get().registerConfig(net.minecraftforge.fml.config.ModConfig.Type.COMMON, Config.COMMON_SPEC);
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
-        TConstructionModifiers.MODIFIERS.register(bus);
+        BCModifiers.MODIFIERS.register(bus);
         //DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> MaterialisClient::onConstruct);
 
         MinecraftForge.EVENT_BUS.register(this);
@@ -27,7 +27,7 @@ public class TinkersConstruction
     public static void gatherData(GatherDataEvent event) {
         DataGenerator generator = event.getGenerator();
         if (event.includeServer()) {
-            generator.addProvider(new TConstructionModifiers(generator));
+            generator.addProvider(new BCModifiers(generator));
         }
     }
 }

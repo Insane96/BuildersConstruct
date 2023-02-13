@@ -1,8 +1,8 @@
 {
-    "modifier.tinkersconstruction.construction": "Construction",
-    "modifier.tinkersconstruction.construction.flavor": "Builder better, build faster",
-    "modifier.tinkersconstruction.construction.description": "You can place multiple blocks with just one interaction.",
-    "modifier.tinkersconstruction.construction.blocks_placed": "%d blocks placed",
-    "modifier.tinkersconstruction.construction.mode": "Mode: %s",
-    "modifier.tinkersconstruction.construction.mode_switch": "Switched mode to: %s"
+    "modifier.buildersconstruct.construction": "Construction",
+    "modifier.buildersconstruct.construction.flavor": "Builder better, build faster",
+    "modifier.buildersconstruct.construction.description": "You can place multiple blocks with just one interaction.",
+    "modifier.buildersconstruct.construction.blocks_placed": "%d blocks placed",
+    "modifier.buildersconstruct.construction.mode": "Mode: %s",
+    "modifier.buildersconstruct.construction.mode_switch": "Switched mode to: %s"
 }

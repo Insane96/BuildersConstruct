@@ -1,18 +1,18 @@
-package insane96mcp.tinkersconstruction;
+package insane96mcp.buildersconstruct;
 
-import insane96mcp.tinkersconstruction.modifiers.ConstructionModifier;
+import insane96mcp.buildersconstruct.modifiers.ConstructionModifier;
 import net.minecraft.data.DataGenerator;
 import slimeknights.tconstruct.library.data.tinkering.AbstractModifierProvider;
 import slimeknights.tconstruct.library.modifiers.Modifier;
 import slimeknights.tconstruct.library.modifiers.util.ModifierDeferredRegister;
 import slimeknights.tconstruct.library.modifiers.util.StaticModifier;
 
-public class TConstructionModifiers extends AbstractModifierProvider {
-    public static final ModifierDeferredRegister MODIFIERS = ModifierDeferredRegister.create(TinkersConstruction.MOD_ID);
+public class BCModifiers extends AbstractModifierProvider {
+    public static final ModifierDeferredRegister MODIFIERS = ModifierDeferredRegister.create(BuildersConstruct.MOD_ID);
 
     public static final StaticModifier<Modifier> CONSTRUCTION = MODIFIERS.register("construction", ConstructionModifier::new);
 
-    public TConstructionModifiers(DataGenerator generator) {
+    public BCModifiers(DataGenerator generator) {
         super(generator);
     }
 
@@ -22,6 +22,6 @@ public class TConstructionModifiers extends AbstractModifierProvider {
 
     @Override
     public String getName() {
-        return "Tinkers' Construction Modifiers";
+        return "Builders Constructs Modifiers";
     }
 }
