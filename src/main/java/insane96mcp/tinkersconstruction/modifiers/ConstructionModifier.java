@@ -187,19 +187,10 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
                         }
                         break;
                     case HORIZONTAL:
-                        for (int i = 0; i < DIRECTION_CLOCKWISE.get(face).size(); i++) {
-                            if (i % 2 == 0) continue;
-                            BlockPos newPos = pos.relative(DIRECTION_CLOCKWISE.get(face).get(i));
-                            if (level.getBlockState(newPos).equals(stateClicked)
-                                    && !toPlace.contains(newPos) && !newList.contains(newPos)
-                                    && level.getBlockState(newPos.relative(face)).isAir()
-                                    && !level.isOutsideBuildHeight(newPos.relative(face)))
-                                newList.add(newPos);
-                        }
-                        break;
                     case VERTICAL:
                         for (int i = 0; i < DIRECTION_CLOCKWISE.get(face).size(); i++) {
-                            if (i % 2 == 1) continue;
+                            if ((i % 2 == 0 && mode == Mode.HORIZONTAL)
+                                    || (i % 2 == 1 && mode == Mode.VERTICAL)) continue;
                             BlockPos newPos = pos.relative(DIRECTION_CLOCKWISE.get(face).get(i));
                             if (level.getBlockState(newPos).equals(stateClicked)
                                     && !toPlace.contains(newPos) && !newList.contains(newPos)
