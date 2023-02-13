@@ -1,6 +1,6 @@
 # Changelog
 
-## Planned for 1.0.0
+## Planned
 * Angel placing (place blocks in mid-air)
 * Check shulker boxes for items to place
 * Place blocks in the offhand instead of the blocks lookin at
