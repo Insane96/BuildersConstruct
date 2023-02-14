@@ -11,7 +11,7 @@ import net.minecraftforge.forge.event.lifecycle.GatherDataEvent;
 @Mod(BuildersConstruct.MOD_ID)
 public class BuildersConstruct
 {
-    public static final String MOD_ID = "buildersConstruct";
+    public static final String MOD_ID = "buildersconstruct";
     public static final String RESOURCE_PREFIX = MOD_ID + ":";
 
     public BuildersConstruct() {
