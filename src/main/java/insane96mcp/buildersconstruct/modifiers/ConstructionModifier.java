@@ -21,8 +21,10 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -102,39 +104,62 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
             Player player = context.getPlayer();
             if (player == null)
                 return InteractionResult.PASS;
+            //Only run the block placing server side
             if (!context.getLevel().isClientSide) {
                 Level level = context.getLevel();
                 Direction face = context.getClickedFace();
-                BlockState stateClicked = level.getBlockState(context.getClickedPos());
-                Item blockItemClicked = stateClicked.getBlock().asItem();
+                BlockState stateToPlace = level.getBlockState(context.getClickedPos());
+                Item blockItemToPlace;
+                boolean offHandBlockPlacing = false;
+                if (player.getOffhandItem().getItem() instanceof BlockItem) {
+                    blockItemToPlace = player.getOffhandItem().getItem();
+                    BlockPlaceContext blockPlaceContext = new BlockPlaceContext(player, context.getHand(), player.getItemInHand(context.getHand()), createBlockHitResult(context.getClickLocation(), face, context.getClickedPos()));
+                    stateToPlace = ((BlockItem) blockItemToPlace).getBlock().getStateForPlacement(blockPlaceContext);
+                    offHandBlockPlacing = true;
+                }
+                else {
+                    blockItemToPlace = stateToPlace.getBlock().asItem();
+                }
                 BlockPos mainPos = context.getClickedPos();
+                //Place blocks only if the block on the face is air
                 if (!level.getBlockState(mainPos.relative(face)).isAir())
                     return InteractionResult.PASS;
 
-                int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
-                List<BlockPos> blocksToPlace = getBlocksToLay(level, mainPos, stateClicked, face, expandedLevel, this.getMode(tool));
+                //Calculate how many blocks the player has
                 int blockCount;
+                //If in creative set -1 (infinite blocks)
                 if (player.isCreative())
                     blockCount = -1;
                 else {
-                    blockCount = ContainerHelper.clearOrCountMatchingItems(player.getInventory(), itemStack -> itemStack.getItem().equals(blockItemClicked), 0, true);
+                    //Otherwise use the /clear command count feature
+                    blockCount = ContainerHelper.clearOrCountMatchingItems(player.getInventory(), itemStack -> itemStack.getItem().equals(blockItemToPlace), 0, true);
                 }
                 if (blockCount == 0)
                     return InteractionResult.PASS;
+
+                int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
+                List<BlockPos> blocksToPlace = getBlocksToLay(level, mainPos, stateToPlace, !offHandBlockPlacing, face, expandedLevel, this.getMode(tool));
                 int placed = 0;
                 for (BlockPos pos : blocksToPlace) {
                     pos = pos.relative(face);
-                    level.setBlock(pos, stateClicked, 3);
+                    if (offHandBlockPlacing) {
+                        BlockPlaceContext blockPlaceContext = new BlockPlaceContext(player, context.getHand(), player.getItemInHand(context.getHand()), createBlockHitResult(context.getClickLocation(), face, pos));
+                        level.setBlock(pos, ((BlockItem) blockItemToPlace).getBlock().getStateForPlacement(blockPlaceContext), 3);
+                    }
+                    else {
+                        level.setBlock(pos, stateToPlace, 3);
+                    }
                     placed++;
                     if (placed == blockCount)
                         break;
                 }
-                player.getInventory().clearOrCountMatchingItems(itemStack -> itemStack.getItem().equals(blockItemClicked), placed, player.getInventory());
+                if (!player.isCreative())
+                    player.getInventory().clearOrCountMatchingItems(itemStack -> itemStack.getItem().equals(blockItemToPlace), placed, player.getInventory());
 
                 if (ToolDamageUtil.damage(tool, blocksToPlace.size(), player, context.getItemInHand())) {
                     player.broadcastBreakEvent(source.getSlot(context.getHand()));
                 }
-                level.playSound(null, mainPos, stateClicked.getSoundType(level, mainPos, player).getPlaceSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
+                level.playSound(null, mainPos, ((BlockItem)blockItemToPlace).getBlock().defaultBlockState().getSoundType(level, mainPos, player).getPlaceSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
             }
 
             return InteractionResult.sidedSuccess(context.getLevel().isClientSide);
@@ -164,7 +189,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         public static final Mode[] values = Mode.values();
     }
 
-    public static List<BlockPos> getBlocksToLay(Level level, BlockPos mainPos, BlockState stateClicked, Direction face, int expandedLevel, Mode mode) {
+    public static List<BlockPos> getBlocksToLay(Level level, BlockPos mainPos, BlockState stateToPlace, boolean requireSameState, Direction face, int expandedLevel, Mode mode) {
         if (expandedLevel > EXPANDED_LEVEL_RANGE.length)
             expandedLevel = EXPANDED_LEVEL_RANGE.length - 1;
         int placeableAmount = EXPANDED_LEVEL_RANGE[expandedLevel];
@@ -179,10 +204,8 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
                     case FILL:
                         for (Direction dir : DIRECTION_CLOCKWISE.get(face)) {
                             BlockPos newPos = pos.relative(dir);
-                            if (level.getBlockState(newPos).equals(stateClicked)
-                                    && !toPlace.contains(newPos) && !newList.contains(newPos)
-                                    && level.getBlockState(newPos.relative(face)).isAir()
-                                    && !level.isOutsideBuildHeight(newPos.relative(face)))
+                            if (isValidPosition(level, newPos, face, stateToPlace, requireSameState)
+                                    && !toPlace.contains(newPos) && !newList.contains(newPos))
                                 newList.add(newPos);
                         }
                         break;
@@ -192,10 +215,8 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
                             if ((i % 2 == 0 && mode == Mode.HORIZONTAL)
                                     || (i % 2 == 1 && mode == Mode.VERTICAL)) continue;
                             BlockPos newPos = pos.relative(DIRECTION_CLOCKWISE.get(face).get(i));
-                            if (level.getBlockState(newPos).equals(stateClicked)
-                                    && !toPlace.contains(newPos) && !newList.contains(newPos)
-                                    && level.getBlockState(newPos.relative(face)).isAir()
-                                    && !level.isOutsideBuildHeight(newPos.relative(face)))
+                            if (isValidPosition(level, newPos, face, stateToPlace, requireSameState)
+                                    && !toPlace.contains(newPos) && !newList.contains(newPos))
                                 newList.add(newPos);
                         }
                         break;
@@ -210,6 +231,17 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         }
 
         return toPlace;
+    }
+
+    public static BlockHitResult createBlockHitResult(Vec3 hitPoint, Direction direction, BlockPos pos) {
+        return new BlockHitResult(hitPoint, direction, pos, false);
+    }
+
+    public static boolean isValidPosition(Level level, BlockPos pos, Direction face, BlockState state, boolean requireSameState) {
+        return ((requireSameState && level.getBlockState(pos).equals(state))
+                    || (!requireSameState && !level.getBlockState(pos).isAir()))
+                && level.getBlockState(pos.relative(face)).isAir()
+                && !level.isOutsideBuildHeight(pos.relative(face));
     }
 
     @SubscribeEvent
@@ -239,7 +271,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         BlockState state = level.getBlockState(pos);
         if (!level.getBlockState(pos.relative(face)).isAir())
             return;
-        List<BlockPos> blocksToPlace = getBlocksToLay(level, pos, state, face, expandedLevel, Mode.values[stack.getPersistentData().getInt(MODE)]);
+        List<BlockPos> blocksToPlace = getBlocksToLay(level, pos, state, !(player.getOffhandItem().getItem() instanceof BlockItem), face, expandedLevel, Mode.values[stack.getPersistentData().getInt(MODE)]);
         if (blocksToPlace.size() == 0)
             return;
         VertexConsumer vertexBuilder = Minecraft.getInstance().renderBuffers().bufferSource().getBuffer(RenderType.LINES);
@@ -248,7 +280,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         event.getPoseStack().translate(-cam.x, -cam.y, -cam.z);
         for (BlockPos blockPos : blocksToPlace) {
             blockPos = blockPos.relative(face);
-            LevelRenderer.renderShape(event.getPoseStack(), vertexBuilder, Shapes.block(), blockPos.getX(), blockPos.getY(), blockPos.getZ(), 1f, 0.2f, 0.2f, 0.75f);
+            LevelRenderer.renderShape(event.getPoseStack(), vertexBuilder, Shapes.block(), blockPos.getX(), blockPos.getY(), blockPos.getZ(), 1f, 0.2f, 0.2f, 0.667f);
         }
         event.getPoseStack().popPose();
         RenderSystem.disableDepthTest();
