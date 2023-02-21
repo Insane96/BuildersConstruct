@@ -104,85 +104,84 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
 
     @Override
     public InteractionResult afterBlockUse(IToolStackView tool, ModifierEntry modifier, UseOnContext context, InteractionSource source) {
-        if (tool.getCurrentDurability() > 1 && tool.getDefinitionData().getModule(ToolModuleHooks.INTERACTION).canInteract(tool, modifier.getId(), source)) {
-            Player player = context.getPlayer();
-            if (player == null)
-                return InteractionResult.PASS;
-            //Only run the block placing server side
-            if (!context.getLevel().isClientSide) {
-                Level level = context.getLevel();
-                Direction face = context.getClickedFace();
-                BlockState stateToPlace = level.getBlockState(context.getClickedPos());
-                Item blockItemToPlace;
-                boolean offHandBlockPlacing = false;
-                if (player.getOffhandItem().getItem() instanceof BlockItem) {
-                    blockItemToPlace = player.getOffhandItem().getItem();
-                    BlockPlaceContext blockPlaceContext = new BlockPlaceContext(player, context.getHand(), player.getItemInHand(context.getHand()), createBlockHitResult(context.getClickLocation(), face, context.getClickedPos()));
-                    stateToPlace = ((BlockItem) blockItemToPlace).getBlock().getStateForPlacement(blockPlaceContext);
-                    offHandBlockPlacing = true;
-                }
-                else {
-                    blockItemToPlace = stateToPlace.getBlock().asItem();
-                }
-                BlockPos mainPos = context.getClickedPos();
-                //Place blocks only if the block on the face is air
-                if (!level.getBlockState(mainPos.relative(face)).isAir())
-                    return InteractionResult.PASS;
+        if (tool.getCurrentDurability() <= 1
+                || !tool.getDefinitionData().getModule(ToolModuleHooks.INTERACTION).canInteract(tool, modifier.getId(), source)
+                || context.getPlayer() == null)
+            return InteractionResult.PASS;
 
-                //Calculate how many blocks the player has
-                int blockCount;
-                //If in creative set -1 (infinite blocks)
-                if (player.isCreative())
-                    blockCount = -1;
-                else {
-                    //Otherwise use the /clear command count feature
-                    blockCount = ContainerHelper.clearOrCountMatchingItems(player.getInventory(), itemStack -> itemStack.getItem().equals(blockItemToPlace), 0, true);
-                }
-                if (blockCount == 0)
-                    return InteractionResult.PASS;
-
-                int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
-                List<BlockPos> blocksToPlace = getBlocksToLay(level, mainPos, stateToPlace, !offHandBlockPlacing, face, expandedLevel, this.getMode(tool));
-                int placed = 0;
-                for (BlockPos pos : blocksToPlace) {
-                    pos = pos.relative(face);
-                    if (offHandBlockPlacing) {
-                        BlockPlaceContext blockPlaceContext = new BlockPlaceContext(player, context.getHand(), player.getItemInHand(context.getHand()), createBlockHitResult(context.getClickLocation(), face, pos));
-                        level.setBlock(pos, ((BlockItem) blockItemToPlace).getBlock().getStateForPlacement(blockPlaceContext), 3);
-                    }
-                    else {
-                        level.setBlock(pos, stateToPlace, 3);
-                    }
-                    placed++;
-                    if (placed == blockCount)
-                        break;
-                }
-                if (!player.isCreative())
-                    player.getInventory().clearOrCountMatchingItems(itemStack -> itemStack.getItem().equals(blockItemToPlace), placed, player.getInventory());
-
-                if (ToolDamageUtil.damage(tool, blocksToPlace.size(), player, context.getItemInHand())) {
-                    player.broadcastBreakEvent(source.getSlot(context.getHand()));
-                }
-                level.playSound(null, mainPos, ((BlockItem)blockItemToPlace).getBlock().defaultBlockState().getSoundType(level, mainPos, player).getPlaceSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
+        Player player = context.getPlayer();
+        //Only run the block placing server side
+        if (!context.getLevel().isClientSide) {
+            Level level = context.getLevel();
+            Direction face = context.getClickedFace();
+            BlockState stateToPlace = level.getBlockState(context.getClickedPos());
+            Item blockItemToPlace;
+            boolean offHandBlockPlacing = false;
+            if (player.getOffhandItem().getItem() instanceof BlockItem) {
+                blockItemToPlace = player.getOffhandItem().getItem();
+                BlockPlaceContext blockPlaceContext = new BlockPlaceContext(player, context.getHand(), player.getItemInHand(context.getHand()), createBlockHitResult(context.getClickLocation(), face, context.getClickedPos()));
+                stateToPlace = ((BlockItem) blockItemToPlace).getBlock().getStateForPlacement(blockPlaceContext);
+                offHandBlockPlacing = true;
             }
+            else {
+                blockItemToPlace = stateToPlace.getBlock().asItem();
+            }
+            BlockPos mainPos = context.getClickedPos();
+            //Place blocks only if the block on the face is air
+            if (!level.getBlockState(mainPos.relative(face)).getMaterial().isReplaceable())
+                return InteractionResult.PASS;
 
-            return InteractionResult.sidedSuccess(context.getLevel().isClientSide);
+            //Calculate how many blocks the player has
+            int blockCount;
+            //If in creative set -1 (infinite blocks)
+            if (player.isCreative())
+                blockCount = -1;
+            else {
+                //Otherwise use the /clear command count feature
+                blockCount = ContainerHelper.clearOrCountMatchingItems(player.getInventory(), itemStack -> itemStack.getItem().equals(blockItemToPlace), 0, true);
+            }
+            if (blockCount == 0)
+                return InteractionResult.PASS;
+
+            int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
+            List<BlockPos> blocksToPlace = getBlocksToLay(level, mainPos, stateToPlace, !offHandBlockPlacing, face, expandedLevel, this.getMode(tool));
+            int placed = 0;
+            for (BlockPos pos : blocksToPlace) {
+                pos = pos.relative(face);
+                if (offHandBlockPlacing) {
+                    BlockPlaceContext blockPlaceContext = new BlockPlaceContext(player, context.getHand(), player.getItemInHand(context.getHand()), createBlockHitResult(context.getClickLocation(), face, pos));
+                    level.setBlock(pos, ((BlockItem) blockItemToPlace).getBlock().getStateForPlacement(blockPlaceContext), 3);
+                }
+                else {
+                    level.setBlock(pos, stateToPlace, 3);
+                }
+                placed++;
+                if (placed == blockCount)
+                    break;
+            }
+            if (!player.isCreative())
+                player.getInventory().clearOrCountMatchingItems(itemStack -> itemStack.getItem().equals(blockItemToPlace), placed, player.getInventory());
+
+            if (ToolDamageUtil.damage(tool, blocksToPlace.size(), player, context.getItemInHand())) {
+                player.broadcastBreakEvent(source.getSlot(context.getHand()));
+            }
+            level.playSound(null, mainPos, ((BlockItem)blockItemToPlace).getBlock().defaultBlockState().getSoundType(level, mainPos, player).getPlaceSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
         }
-        return InteractionResult.PASS;
+
+        return InteractionResult.sidedSuccess(context.getLevel().isClientSide);
     }
 
     @Override
     public InteractionResult onToolUse(IToolStackView tool, ModifierEntry modifier, Player player, InteractionHand hand, InteractionSource source) {
-        if (tool.getCurrentDurability() > 1) {
-            if (player.isCrouching()) {
-                if (!player.getLevel().isClientSide) {
-                    this.nextMode(tool);
-                    ((ServerPlayer) player).sendMessage(new TranslatableComponent(getTranslationKey() + ".mode_switch", this.getMode(tool)), ChatType.GAME_INFO, Util.NIL_UUID);
-                }
-                return InteractionResult.sidedSuccess(player.level.isClientSide);
-            }
+        if (tool.getCurrentDurability() <= 1
+                || !player.isCrouching())
+            return InteractionResult.PASS;
+
+        if (!player.getLevel().isClientSide) {
+            this.nextMode(tool);
+            ((ServerPlayer) player).sendMessage(new TranslatableComponent(getTranslationKey() + ".mode_switch", this.getMode(tool)), ChatType.GAME_INFO, Util.NIL_UUID);
         }
-        return InteractionResult.PASS;
+        return InteractionResult.sidedSuccess(player.level.isClientSide);
     }
 
     enum Mode {
@@ -245,8 +244,8 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
 
     public static boolean isValidPosition(Level level, BlockPos pos, Direction face, BlockState state, boolean requireSameState) {
         return ((requireSameState && level.getBlockState(pos).equals(state))
-                    || (!requireSameState && !level.getBlockState(pos).isAir()))
-                && level.getBlockState(pos.relative(face)).isAir()
+                    || (!requireSameState && level.getBlockState(pos).canOcclude()))
+                && level.getBlockState(pos.relative(face)).getMaterial().isReplaceable()
                 && !level.isOutsideBuildHeight(pos.relative(face));
     }
 
@@ -278,7 +277,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         ItemStack blockStack = new ItemStack(state.getBlock().asItem());
         if (player.getOffhandItem().getItem() instanceof BlockItem)
             blockStack = player.getOffhandItem();
-        if (!level.getBlockState(pos.relative(face)).isAir())
+        if (!level.getBlockState(pos.relative(face)).getMaterial().isReplaceable())
             return;
         List<BlockPos> blocksToPlace = getBlocksToLay(level, pos, state, !(player.getOffhandItem().getItem() instanceof BlockItem), face, expandedLevel, Mode.values[stack.getPersistentData().getInt(MODE)]);
         if (blocksToPlace.size() == 0)

@@ -7,6 +7,7 @@
 
 ## 1.1.0
 * It's now possible to place blocks from the off-hand
+* Block placing now checks for replaceable blocks instead of air, making the modifier replace blocks like tall grass
 
 ## 1.0.0
 * First Release
