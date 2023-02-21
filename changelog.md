@@ -1,7 +1,7 @@
 # Changelog
 
 ## Planned
-* Angel placing (place blocks in mid-air)
+* Angel placing (place blocks in midair)
 * Check shulker boxes for items to place
 * Place blocks in the hotbar like a Quark Trowel
 
