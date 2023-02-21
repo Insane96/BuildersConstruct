@@ -9,7 +9,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.ChatType;
@@ -24,7 +23,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
@@ -274,16 +272,16 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         Direction face = blockhitresult.getDirection();
         BlockPos pos = blockhitresult.getBlockPos();
         BlockState state = level.getBlockState(pos);
-        ItemStack blockStack = new ItemStack(state.getBlock().asItem());
+        /*ItemStack blockStack = new ItemStack(state.getBlock().asItem());
         if (player.getOffhandItem().getItem() instanceof BlockItem)
-            blockStack = player.getOffhandItem();
+            blockStack = player.getOffhandItem();*/
         if (!level.getBlockState(pos.relative(face)).getMaterial().isReplaceable())
             return;
         List<BlockPos> blocksToPlace = getBlocksToLay(level, pos, state, !(player.getOffhandItem().getItem() instanceof BlockItem), face, expandedLevel, Mode.values[stack.getPersistentData().getInt(MODE)]);
         if (blocksToPlace.size() == 0)
             return;
         VertexConsumer vertexBuilder = Minecraft.getInstance().renderBuffers().bufferSource().getBuffer(RenderType.LINES);
-        ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
+        //ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
         Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         event.getPoseStack().pushPose();
         event.getPoseStack().translate(-cam.x, -cam.y, -cam.z);
