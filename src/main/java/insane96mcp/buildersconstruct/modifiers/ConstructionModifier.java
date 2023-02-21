@@ -57,8 +57,6 @@ import java.util.*;
 @Mod.EventBusSubscriber(modid = BuildersConstruct.MOD_ID)
 public class ConstructionModifier extends NoLevelsModifier implements BlockInteractionModifierHook, GeneralInteractionModifierHook {
 
-    private static final UUID UUID = java.util.UUID.fromString("6f4a1c1e-423f-4059-a258-4e8e747f847e");
-
     private static final int[] EXPANDED_LEVEL_RANGE = {5, 9, 16, 32, 64, 128, 256, 512, 1024, 2048};
 
     private static final ResourceLocation MODE = new ResourceLocation(BuildersConstruct.MOD_ID, "construction_mode");
@@ -119,11 +117,15 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
                 blockItemToPlace = player.getOffhandItem().getItem();
                 BlockPlaceContext blockPlaceContext = new BlockPlaceContext(player, context.getHand(), player.getItemInHand(context.getHand()), createBlockHitResult(context.getClickLocation(), face, context.getClickedPos()));
                 stateToPlace = ((BlockItem) blockItemToPlace).getBlock().getStateForPlacement(blockPlaceContext);
+                if (stateToPlace == null)
+                    return InteractionResult.PASS;
                 offHandBlockPlacing = true;
             }
             else {
                 blockItemToPlace = stateToPlace.getBlock().asItem();
             }
+            if (stateToPlace.hasBlockEntity())
+                return InteractionResult.PASS;
             BlockPos mainPos = context.getClickedPos();
             //Place blocks only if the block on the face is air
             if (!level.getBlockState(mainPos.relative(face)).getMaterial().isReplaceable())
@@ -272,6 +274,12 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         Direction face = blockhitresult.getDirection();
         BlockPos pos = blockhitresult.getBlockPos();
         BlockState state = level.getBlockState(pos);
+        if (player.getOffhandItem().getItem() instanceof BlockItem) {
+            Item blockItemToPlace = player.getOffhandItem().getItem();
+            state = ((BlockItem) blockItemToPlace).getBlock().defaultBlockState();
+        }
+        if (state.hasBlockEntity())
+            return;
         /*ItemStack blockStack = new ItemStack(state.getBlock().asItem());
         if (player.getOffhandItem().getItem() instanceof BlockItem)
             blockStack = player.getOffhandItem();*/

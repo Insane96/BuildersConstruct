@@ -3,8 +3,11 @@
 ## Planned
 * Angel placing (place blocks in midair)
 * Check shulker boxes for items to place
-* Place blocks in the hotbar like a Quark Trowel
-* Blacklist tile entities
+* Place blocks in the hot bar like a Quark Trowel
+* Fix shift left-clicking changing mode
+
+## 1.1.1
+* Tile Entities are now blacklisted from placing
 
 ## 1.1.0
 * It's now possible to place blocks from the off-hand
