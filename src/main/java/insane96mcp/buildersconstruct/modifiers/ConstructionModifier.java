@@ -238,7 +238,9 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
     }
 
     public static BlockHitResult createBlockHitResult(Vec3 hitPoint, Direction direction, BlockPos pos) {
-        return new BlockHitResult(hitPoint, direction, pos, false);
+        int wholeY = (int)hitPoint.y;
+        double decimalY = hitPoint.y - wholeY;
+        return new BlockHitResult(new Vec3(hitPoint.x, pos.getY() + decimalY, hitPoint.z), direction, pos, false);
     }
 
     public static boolean isValidPosition(Level level, BlockPos pos, Direction face, BlockState state, boolean requireSameState) {
