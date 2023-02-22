@@ -174,7 +174,8 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
     @Override
     public InteractionResult onToolUse(IToolStackView tool, ModifierEntry modifier, Player player, InteractionHand hand, InteractionSource source) {
         if (tool.getCurrentDurability() <= 1
-                || !player.isCrouching())
+                || !player.isCrouching()
+                || !tool.getDefinitionData().getModule(ToolModuleHooks.INTERACTION).canInteract(tool, modifier.getId(), source))
             return InteractionResult.PASS;
 
         if (!player.getLevel().isClientSide) {
