@@ -1,0 +1,7 @@
+{
+    "replace": false,
+    "values": [
+        "#tconstruct:modifiable/interactable/left",
+        "#tconstruct:modifiable/interactable/right"
+    ]
+}

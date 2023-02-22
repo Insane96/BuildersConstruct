@@ -8,6 +8,7 @@
 
 ## 1.1.1
 * Tile Entities are now blacklisted from placing
+* You can no longer put construction on chestplates
 
 ## 1.1.0
 * It's now possible to place blocks from the off-hand
