@@ -75,6 +75,9 @@ public class AngelBuilderModifier extends NoLevelsModifier implements GeneralInt
             if (player.level.getBlockState(pos).canOcclude())
                 return InteractionResult.PASS;
             player.level.setBlock(pos, blockItemToPlace.getBlock().defaultBlockState(), 3);
+            if (!player.getAbilities().instabuild) {
+                player.getOffhandItem().shrink(1);
+            }
             if (ToolDamageUtil.directDamage(tool, 20, player, player.getItemInHand(hand))) {
                 player.broadcastBreakEvent(hand);
             }
