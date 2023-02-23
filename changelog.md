@@ -5,6 +5,9 @@
 * Check shulker boxes for items to place
 * Place blocks in the hot bar like a Quark Trowel
 
+## Upcoming
+* Fixed a bug where Construction wouldn't work if the durability of the tools was 1
+
 ## 1.1.1
 * Tile Entities are now blacklisted from placing
 * You can no longer put construction on chestplates
