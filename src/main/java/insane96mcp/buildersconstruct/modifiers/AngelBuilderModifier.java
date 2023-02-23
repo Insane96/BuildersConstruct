@@ -133,7 +133,7 @@ public class AngelBuilderModifier extends NoLevelsModifier implements GeneralInt
         if (hitResult.getType() == HitResult.Type.BLOCK)
             return;
         BlockPos pos = new BlockPos(endRayCast);
-        if (player.level.getBlockState(pos).canOcclude())
+        if (player.level.getBlockState(pos).getMaterial().isReplaceable())
             return;
 
         VertexConsumer vertexBuilder = Minecraft.getInstance().renderBuffers().bufferSource().getBuffer(RenderType.LINES);
