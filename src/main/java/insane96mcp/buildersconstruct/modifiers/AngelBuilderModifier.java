@@ -89,7 +89,7 @@ public class AngelBuilderModifier extends NoLevelsModifier implements GeneralInt
                         break;
                 }
             }*/
-            if (player.level.getBlockState(pos).canOcclude())
+            if (player.level.getBlockState(pos).getMaterial().isReplaceable())
                 return InteractionResult.PASS;
             player.level.setBlock(pos, blockItemToPlace.getBlock().defaultBlockState(), 3);
             if (!player.getAbilities().instabuild) {
