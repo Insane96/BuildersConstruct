@@ -72,6 +72,23 @@ public class AngelBuilderModifier extends NoLevelsModifier implements GeneralInt
             if (hitResult.getType() == HitResult.Type.BLOCK)
                 return InteractionResult.PASS;
             BlockPos pos = new BlockPos(endRayCast);
+            /*Iterable<BlockPos> blockPositions = tool.getDefinitionData().getAOE().getBlocks(tool, player.getItemInHand(hand), player, Blocks.AIR.defaultBlockState(), player.level, pos, player.getDirection(), IAreaOfEffectIterator.AOEMatchType.TRANSFORM);
+            if (Iterables.isEmpty(blockPositions)) {
+                blockPositions = List.of(pos);
+            }
+            for (BlockPos posToPlace : blockPositions) {
+                if (player.level.getBlockState(posToPlace).canOcclude())
+                    return InteractionResult.PASS;
+                player.level.setBlock(posToPlace, blockItemToPlace.getBlock().defaultBlockState(), 3);
+                if (!player.getAbilities().instabuild) {
+                    player.getOffhandItem().shrink(1);
+                }
+                if (ToolDamageUtil.directDamage(tool, 20, player, player.getItemInHand(hand))) {
+                    player.broadcastBreakEvent(hand);
+                    if (tool.isBroken())
+                        break;
+                }
+            }*/
             if (player.level.getBlockState(pos).canOcclude())
                 return InteractionResult.PASS;
             player.level.setBlock(pos, blockItemToPlace.getBlock().defaultBlockState(), 3);
