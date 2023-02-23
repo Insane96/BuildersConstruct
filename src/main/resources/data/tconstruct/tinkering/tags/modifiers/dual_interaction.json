@@ -1,6 +1,7 @@
 {
     "replace": false,
     "values": [
-        "buildersconstruct:construction"
+        "buildersconstruct:construction",
+        "buildersconstruct:angel_builder"
     ]
 }

@@ -1,3 +1,4 @@
 {
-    "buildersconstruct:construction": ["tconstruct:item/materials/ichor_slime_crystal", "tconstruct:gui/modifiers/book"]
+    "buildersconstruct:construction": ["tconstruct:item/materials/ichor_slime_crystal", "tconstruct:gui/modifiers/book"],
+    "buildersconstruct:angel_builder": ["minecraft:item/feather", "tconstruct:gui/modifiers/book"]
 }
