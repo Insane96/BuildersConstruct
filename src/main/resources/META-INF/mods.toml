@@ -4,12 +4,12 @@ license="All rights reserved"
 [[mods]]
 modId="buildersconstruct"
 version="${file.jarVersion}"
-displayName="Tinkers Construction Modifier"
+displayName="Builders Construct"
 # logoFile="examplemod.png"
 # credits="Thanks for this example mod goes to Java"
 authors="Insane96MCP"
 description='''
-Tinkers' Construction is a mod that adds modifiers for wand to let you build faster
+Builders Construct is a mod that adds modifiers for wand to let you build faster
 '''
 
 [[dependencies.buildersconstruct]]

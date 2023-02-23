@@ -18,7 +18,7 @@
                 "tag": "tconstruct:modifiable/durability"
             },
             {
-                "tag": "buildersconstruct:modifiable/construction_allowed_tools"
+                "tag": "buildersconstruct:modifiable/interactable_no_armor"
             }
         ]
     },
