@@ -1,11 +1,11 @@
 # Changelog
 
 ## Planned
-* Angel placing (place blocks in midair)
 * Check shulker boxes for items to place
 * Place blocks in the hot bar like a Quark Trowel
 
-## Upcoming
+## 1.2.0
+* Added Angel Building. With this new Ability you can place blocks from your off-hand in midair
 * Fixed a bug where Construction wouldn't work if the durability of the tools was 1
 * Fixed modifier not applicable to any tool
 
