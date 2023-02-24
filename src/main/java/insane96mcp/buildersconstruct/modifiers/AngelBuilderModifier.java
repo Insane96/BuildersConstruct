@@ -89,7 +89,7 @@ public class AngelBuilderModifier extends NoLevelsModifier implements GeneralInt
                         break;
                 }
             }*/
-            if (player.level.getBlockState(pos).getMaterial().isReplaceable())
+            if (!player.level.getBlockState(pos).getMaterial().isReplaceable())
                 return InteractionResult.PASS;
             player.level.setBlock(pos, blockItemToPlace.getBlock().defaultBlockState(), 3);
             if (!player.getAbilities().instabuild) {
@@ -115,6 +115,9 @@ public class AngelBuilderModifier extends NoLevelsModifier implements GeneralInt
             stack = ToolStack.from(player.getOffhandItem());
         else return;
 
+        if (stack.isBroken())
+            return;
+
         int angelBuilder = stack.getModifierLevel(BCModifiers.ANGEL_BUILDER.get());
         if (angelBuilder == 0)
             return;
@@ -133,7 +136,7 @@ public class AngelBuilderModifier extends NoLevelsModifier implements GeneralInt
         if (hitResult.getType() == HitResult.Type.BLOCK)
             return;
         BlockPos pos = new BlockPos(endRayCast);
-        if (player.level.getBlockState(pos).getMaterial().isReplaceable())
+        if (!player.level.getBlockState(pos).getMaterial().isReplaceable())
             return;
 
         VertexConsumer vertexBuilder = Minecraft.getInstance().renderBuffers().bufferSource().getBuffer(RenderType.LINES);
