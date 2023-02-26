@@ -38,6 +38,7 @@ import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
+import slimeknights.mantle.client.TooltipKey;
 import slimeknights.tconstruct.library.modifiers.ModifierEntry;
 import slimeknights.tconstruct.library.modifiers.TinkerHooks;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.BlockInteractionModifierHook;
@@ -51,7 +52,6 @@ import slimeknights.tconstruct.library.tools.helper.ToolDamageUtil;
 import slimeknights.tconstruct.library.tools.item.ModifiableItem;
 import slimeknights.tconstruct.library.tools.nbt.IToolStackView;
 import slimeknights.tconstruct.library.tools.nbt.ToolStack;
-import slimeknights.tconstruct.library.utils.TooltipKey;
 import slimeknights.tconstruct.tools.TinkerModifiers;
 
 import java.util.*;
@@ -152,7 +152,10 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
                 pos = pos.relative(face);
                 if (offHandBlockPlacing) {
                     BlockPlaceContext blockPlaceContext = new BlockPlaceContext(player, context.getHand(), player.getItemInHand(context.getHand()), createBlockHitResult(context.getClickLocation(), face, pos));
-                    level.setBlock(pos, ((BlockItem) blockItemToPlace).getBlock().getStateForPlacement(blockPlaceContext), 3);
+                    BlockState blockState = ((BlockItem) blockItemToPlace).getBlock().getStateForPlacement(blockPlaceContext);
+                    if (blockState == null)
+                        continue;
+                    level.setBlock(pos, blockState, 3);
                 }
                 else {
                     level.setBlock(pos, stateToPlace, 3);

@@ -5,7 +5,7 @@
 * Place blocks in the hot bar like a Quark Trowel
 
 ## Upcoming
-* Mod can now run on a server
+* Mod can now run on server
 
 ## 1.2.0
 * Added Angel Building. With this new Ability you can place blocks from your off-hand in midair
