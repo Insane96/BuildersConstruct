@@ -32,6 +32,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -250,6 +252,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
                 && !level.isOutsideBuildHeight(pos.relative(face));
     }
 
+    @OnlyIn(Dist.CLIENT)
     @SubscribeEvent
     public static void onRenderLevelLast(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES

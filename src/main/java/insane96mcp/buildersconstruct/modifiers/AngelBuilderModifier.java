@@ -19,6 +19,8 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -102,6 +104,7 @@ public class AngelBuilderModifier extends NoLevelsModifier implements GeneralInt
         return InteractionResult.sidedSuccess(player.level.isClientSide);
     }
 
+    @OnlyIn(Dist.CLIENT)
     @SubscribeEvent
     public static void onRenderLevelLast(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES
