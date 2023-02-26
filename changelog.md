@@ -2,10 +2,12 @@
 
 ## Planned
 * Check shulker boxes for items to place
-* Place blocks in the hot bar like a Quark Trowel
+* Place random blocks in the hot bar like a Quark Trowel
 
 ## Upcoming
+* Angel builder placing distance has been reduced (~~3~~ -> 2.5 blocks), but it's now affected by bonus reach distance (e.g. Reach ability on chestplates)
 * Mod can now run on server
+* Fixed Angel Builder making no place sound
 
 ## 1.2.0
 * Added Angel Building. With this new Ability you can place blocks from your off-hand in midair
