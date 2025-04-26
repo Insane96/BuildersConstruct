@@ -4,18 +4,15 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import insane96mcp.buildersconstruct.BCModifiers;
 import insane96mcp.buildersconstruct.BuildersConstruct;
-import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.ChatType;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.InteractionHand;
@@ -40,13 +37,13 @@ import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 import slimeknights.mantle.client.TooltipKey;
 import slimeknights.tconstruct.library.modifiers.ModifierEntry;
-import slimeknights.tconstruct.library.modifiers.TinkerHooks;
+import slimeknights.tconstruct.library.modifiers.ModifierHooks;
+import slimeknights.tconstruct.library.modifiers.hook.display.TooltipModifierHook;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.BlockInteractionModifierHook;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.GeneralInteractionModifierHook;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.InteractionSource;
 import slimeknights.tconstruct.library.modifiers.impl.NoLevelsModifier;
-import slimeknights.tconstruct.library.modifiers.util.ModifierHookMap;
-import slimeknights.tconstruct.library.tools.definition.module.ToolModuleHooks;
+import slimeknights.tconstruct.library.module.ModuleHookMap;
 import slimeknights.tconstruct.library.tools.definition.module.interaction.DualOptionInteraction;
 import slimeknights.tconstruct.library.tools.helper.ToolDamageUtil;
 import slimeknights.tconstruct.library.tools.item.ModifiableItem;
@@ -57,18 +54,17 @@ import slimeknights.tconstruct.tools.TinkerModifiers;
 import java.util.*;
 
 @Mod.EventBusSubscriber(modid = BuildersConstruct.MOD_ID)
-public class ConstructionModifier extends NoLevelsModifier implements BlockInteractionModifierHook, GeneralInteractionModifierHook {
+public class ConstructionModifier extends NoLevelsModifier implements BlockInteractionModifierHook, GeneralInteractionModifierHook, TooltipModifierHook {
 
-    private static final int[] EXPANDED_LEVEL_RANGE = {5, 9, 16, 32, 64, 128, 256, 512, 1024, 2048};
-
-    private static final ResourceLocation MODE = new ResourceLocation(BuildersConstruct.MOD_ID, "construction_mode");
+    private static final ResourceLocation MODE = ResourceLocation.fromNamespaceAndPath(BuildersConstruct.MOD_ID, "construction_mode");
 
     private static Map<Direction, List<Direction>> DIRECTION_CLOCKWISE;
 
     @Override
-    protected void registerHooks(ModifierHookMap.Builder hookBuilder) {
+    protected void registerHooks(ModuleHookMap.Builder hookBuilder) {
         super.registerHooks(hookBuilder);
-        hookBuilder.addHook(this, TinkerHooks.BLOCK_INTERACT, TinkerHooks.CHARGEABLE_INTERACT);
+        hookBuilder.addHook(this, ModifierHooks.BLOCK_INTERACT, ModifierHooks.GENERAL_INTERACT);
+        hookBuilder.addHook(this, ModifierHooks.TOOLTIP);
 
         DIRECTION_CLOCKWISE = new EnumMap<>(Direction.class);
         DIRECTION_CLOCKWISE.put(Direction.UP, Arrays.asList(Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST));
@@ -96,14 +92,15 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
     }
 
     @Override
-    public Component getDisplayName(IToolStackView tool, int level) {
-        return DualOptionInteraction.formatModifierName(tool, this, super.getDisplayName(tool, level));
+    public Component getDisplayName(IToolStackView tool, ModifierEntry entry, @Nullable RegistryAccess access) {
+        return DualOptionInteraction.formatModifierName(tool, this, super.getDisplayName(entry.getLevel()));
     }
 
     @Override
     public InteractionResult afterBlockUse(IToolStackView tool, ModifierEntry modifier, UseOnContext context, InteractionSource source) {
         if (tool.getCurrentDurability() < 1
-                || !tool.getDefinitionData().getModule(ToolModuleHooks.INTERACTION).canInteract(tool, modifier.getId(), source)
+                || source != InteractionSource.RIGHT_CLICK
+                //|| !tool.getDefinitionData().getModule(ToolModuleHooks.INTERACTION).canInteract(tool, modifier.getId(), source)
                 || context.getPlayer() == null)
             return InteractionResult.PASS;
 
@@ -130,7 +127,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
                 return InteractionResult.PASS;
             BlockPos mainPos = context.getClickedPos();
             //Place blocks only if the block on the face is air
-            if (!level.getBlockState(mainPos.relative(face)).getMaterial().isReplaceable())
+            if (!level.getBlockState(mainPos.relative(face)).canBeReplaced())
                 return InteractionResult.PASS;
 
             //Calculate how many blocks the player has
@@ -146,7 +143,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
                 return InteractionResult.PASS;
 
             int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
-            List<BlockPos> blocksToPlace = getBlocksToLay(level, mainPos, stateToPlace, !offHandBlockPlacing, face, expandedLevel, this.getMode(tool));
+            List<BlockPos> blocksToPlace = getBlocksToLay(level, mainPos, stateToPlace, !offHandBlockPlacing, face, player.getDirection(), expandedLevel, this.getMode(tool));
             int placed = 0;
             for (BlockPos pos : blocksToPlace) {
                 pos = pos.relative(face);
@@ -180,17 +177,16 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
     public InteractionResult onToolUse(IToolStackView tool, ModifierEntry modifier, Player player, InteractionHand hand, InteractionSource source) {
         if (tool.getCurrentDurability() < 1
                 || !player.isCrouching()
-                || !tool.getDefinitionData().getModule(ToolModuleHooks.INTERACTION).canInteract(tool, modifier.getId(), source))
+                //|| !tool.getDefinitionData().getModule(ToolModuleHooks.INTERACTION).canInteract(tool, modifier.getId(), source)
+                || source != InteractionSource.RIGHT_CLICK)
             return InteractionResult.PASS;
 
-        if (!player.getLevel().isClientSide) {
-            this.nextMode(tool);
-            ((ServerPlayer) player).sendMessage(new TranslatableComponent(getTranslationKey() + ".mode_switch", this.getMode(tool)), ChatType.GAME_INFO, Util.NIL_UUID);
-        }
-        return InteractionResult.sidedSuccess(player.level.isClientSide);
+        this.nextMode(tool);
+        player.displayClientMessage(Component.translatable(getTranslationKey() + ".mode_switch", this.getMode(tool)), true);
+        return InteractionResult.sidedSuccess(player.level().isClientSide);
     }
 
-    enum Mode {
+    public enum Mode {
         FILL,
         HORIZONTAL,
         VERTICAL;
@@ -198,10 +194,12 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         public static final Mode[] values = Mode.values();
     }
 
-    public static List<BlockPos> getBlocksToLay(Level level, BlockPos mainPos, BlockState stateToPlace, boolean requireSameState, Direction face, int expandedLevel, Mode mode) {
-        if (expandedLevel > EXPANDED_LEVEL_RANGE.length)
-            expandedLevel = EXPANDED_LEVEL_RANGE.length - 1;
-        int placeableAmount = EXPANDED_LEVEL_RANGE[expandedLevel];
+    private static int placeableAmount(int lvl) {
+        return (int) Math.pow(2, lvl + 2);
+    }
+
+    public static List<BlockPos> getBlocksToLay(Level level, BlockPos mainPos, BlockState stateToPlace, boolean requireSameState, Direction face, Direction playerFacing, int expandedLevel, Mode mode) {
+        int placeableAmount = placeableAmount(expandedLevel);
         List<BlockPos> toCheck = new ArrayList<>();
         toCheck.add(mainPos);
 
@@ -220,13 +218,35 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
                         break;
                     case HORIZONTAL:
                     case VERTICAL:
-                        for (int i = 0; i < DIRECTION_CLOCKWISE.get(face).size(); i++) {
-                            if ((i % 2 == 0 && mode == Mode.HORIZONTAL)
-                                    || (i % 2 == 1 && mode == Mode.VERTICAL)) continue;
-                            BlockPos newPos = pos.relative(DIRECTION_CLOCKWISE.get(face).get(i));
+                        if (face.getAxis() == Direction.Axis.Y) {
+                            BlockPos newPos;
+                            if (mode == Mode.HORIZONTAL) {
+                                newPos = pos.relative(playerFacing.getClockWise());
+                                if (isValidPosition(level, newPos, face, stateToPlace, requireSameState)
+                                        && !toPlace.contains(newPos) && !newList.contains(newPos))
+                                    newList.add(newPos);
+                                newPos = pos.relative(playerFacing.getCounterClockWise());
+                            }
+                            else {
+                                newPos = pos.relative(playerFacing);
+                                if (isValidPosition(level, newPos, face, stateToPlace, requireSameState)
+                                        && !toPlace.contains(newPos) && !newList.contains(newPos))
+                                    newList.add(newPos);
+                                newPos = pos.relative(playerFacing.getOpposite());
+                            }
                             if (isValidPosition(level, newPos, face, stateToPlace, requireSameState)
                                     && !toPlace.contains(newPos) && !newList.contains(newPos))
                                 newList.add(newPos);
+                        }
+                        else {
+                            for (int i = 0; i < DIRECTION_CLOCKWISE.get(face).size(); i++) {
+                                if ((i % 2 == 0 && mode == Mode.HORIZONTAL)
+                                        || (i % 2 == 1 && mode == Mode.VERTICAL)) continue;
+                                BlockPos newPos = pos.relative(DIRECTION_CLOCKWISE.get(face).get(i));
+                                if (isValidPosition(level, newPos, face, stateToPlace, requireSameState)
+                                        && !toPlace.contains(newPos) && !newList.contains(newPos))
+                                    newList.add(newPos);
+                            }
                         }
                         break;
                 }
@@ -251,7 +271,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
     public static boolean isValidPosition(Level level, BlockPos pos, Direction face, BlockState state, boolean requireSameState) {
         return ((requireSameState && level.getBlockState(pos).equals(state))
                     || (!requireSameState && level.getBlockState(pos).canOcclude()))
-                && level.getBlockState(pos.relative(face)).getMaterial().isReplaceable()
+                && level.getBlockState(pos.relative(face)).canBeReplaced()
                 && !level.isOutsideBuildHeight(pos.relative(face));
     }
 
@@ -276,7 +296,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
             return;
         int expandedLevel = stack.getModifierLevel(TinkerModifiers.expanded.get());
 
-        Level level = player.getLevel();
+        Level level = player.level();
         BlockHitResult blockhitresult = (BlockHitResult) Minecraft.getInstance().hitResult;
         Direction face = blockhitresult.getDirection();
         BlockPos pos = blockhitresult.getBlockPos();
@@ -290,10 +310,10 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         /*ItemStack blockStack = new ItemStack(state.getBlock().asItem());
         if (player.getOffhandItem().getItem() instanceof BlockItem)
             blockStack = player.getOffhandItem();*/
-        if (!level.getBlockState(pos.relative(face)).getMaterial().isReplaceable())
+        if (!level.getBlockState(pos.relative(face)).canBeReplaced())
             return;
-        List<BlockPos> blocksToPlace = getBlocksToLay(level, pos, state, !(player.getOffhandItem().getItem() instanceof BlockItem), face, expandedLevel, Mode.values[stack.getPersistentData().getInt(MODE)]);
-        if (blocksToPlace.size() == 0)
+        List<BlockPos> blocksToPlace = getBlocksToLay(level, pos, state, !(player.getOffhandItem().getItem() instanceof BlockItem), face, player.getDirection(), expandedLevel, Mode.values[stack.getPersistentData().getInt(MODE)]);
+        if (blocksToPlace.isEmpty())
             return;
         VertexConsumer vertexBuilder = Minecraft.getInstance().renderBuffers().bufferSource().getBuffer(RenderType.LINES);
         //ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
@@ -308,7 +328,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
             BakedModel model = itemRenderer.getItemModelShaper().getItemModel(blockStack);
             itemRenderer.render(blockStack, ItemTransforms.TransformType.NONE, false, event.getPoseStack(), Minecraft.getInstance().renderBuffers().bufferSource(), LevelRenderer.getLightColor(level, blockPos), OverlayTexture.NO_WHITE_U, model);
             event.getPoseStack().popPose();*/
-            LevelRenderer.renderShape(event.getPoseStack(), vertexBuilder, Shapes.block(), blockPos.getX(), blockPos.getY(), blockPos.getZ(), 1f, 0.2f, 0.2f, 0.667f);
+            LevelRenderer.renderShape(event.getPoseStack(), vertexBuilder, Shapes.block(), blockPos.getX(), blockPos.getY(), blockPos.getZ(), 1f, 0.2f, 0.2f, 0.5f);
         }
         event.getPoseStack().popPose();
         RenderSystem.disableDepthTest();
@@ -316,9 +336,8 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
     }
 
     @Override
-    public void addInformation(IToolStackView tool, int level, @Nullable Player player, List<Component> tooltip, TooltipKey tooltipKey, TooltipFlag tooltipFlag) {
-        int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
-        tooltip.add(applyStyle(new TranslatableComponent(getTranslationKey() + ".blocks_placed", EXPANDED_LEVEL_RANGE[expandedLevel])));
-        tooltip.add(applyStyle(new TranslatableComponent(getTranslationKey() + ".mode", this.getMode(tool))));
+    public void addTooltip(IToolStackView tool, ModifierEntry modifier, @Nullable Player player, List<Component> tooltip, TooltipKey tooltipKey, TooltipFlag tooltipFlag) {
+        tooltip.add(applyStyle(Component.translatable(getTranslationKey() + ".blocks_placed", placeableAmount(modifier.getLevel()))));
+        tooltip.add(applyStyle(Component.translatable(getTranslationKey() + ".mode", this.getMode(tool))));
     }
 }

@@ -1,0 +1,28 @@
+{
+    "type": "tconstruct:modifier",
+    "allow_crystal": true,
+    "inputs": [
+        {
+            "item": "minecraft:piston"
+        },
+        {
+            "tag": "forge:ingots/gold"
+        },
+        {
+            "item": "minecraft:honey_block"
+        }
+    ],
+    "level": 1,
+    "result": "buildersconstruct:construction",
+    "slots": {
+        "abilities": 1
+    },
+    "tools": [
+        {
+            "tag": "tconstruct:modifiable/durability"
+        },
+        {
+            "tag": "buildersconstruct:modifiable/interactable_no_armor"
+        }
+    ]
+}
