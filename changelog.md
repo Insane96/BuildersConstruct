@@ -4,6 +4,9 @@
 * Check shulker boxes for items to place
 * Place random blocks in the hot bar like a Quark Trowel
 
+## 1.3.1
+* Fixed requiring tconstruct version not yet released
+
 ## 1.3.0
 * Updated to 1.20.1
 * Construction modifier
