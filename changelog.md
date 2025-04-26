@@ -4,6 +4,12 @@
 * Check shulker boxes for items to place
 * Place random blocks in the hot bar like a Quark Trowel
 
+## 1.3.0
+* Updated to 1.20.1
+* Construction modifier
+  * Amount of blocks placed uses a simple formula `(2^(expanded_level + 2))`
+  * Horizontal and vertical placement direction is now player dependant, and not north dependant
+
 ## 1.2.1
 * Angel builder placing distance has been reduced (~~3~~ -> 2.5 blocks), but it's now affected by bonus reach distance (e.g. Reach ability on chestplates)
 * Mod can now run on server
