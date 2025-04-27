@@ -2,7 +2,6 @@ package insane96mcp.buildersconstruct.modifiers;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import insane96mcp.buildersconstruct.BCModifiers;
 import insane96mcp.buildersconstruct.BuildersConstruct;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -26,38 +25,52 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import slimeknights.mantle.data.loadable.record.RecordLoadable;
+import slimeknights.mantle.data.registry.GenericLoaderRegistry;
 import slimeknights.tconstruct.library.modifiers.ModifierEntry;
 import slimeknights.tconstruct.library.modifiers.ModifierHooks;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.GeneralInteractionModifierHook;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.InteractionSource;
-import slimeknights.tconstruct.library.modifiers.impl.NoLevelsModifier;
-import slimeknights.tconstruct.library.module.ModuleHookMap;
+import slimeknights.tconstruct.library.modifiers.modules.ModifierModule;
+import slimeknights.tconstruct.library.modifiers.modules.util.ModifierCondition;
+import slimeknights.tconstruct.library.module.HookProvider;
+import slimeknights.tconstruct.library.module.ModuleHook;
 import slimeknights.tconstruct.library.tools.helper.ToolDamageUtil;
 import slimeknights.tconstruct.library.tools.item.ModifiableItem;
 import slimeknights.tconstruct.library.tools.nbt.IToolStackView;
 import slimeknights.tconstruct.library.tools.nbt.ToolStack;
 
+import java.util.List;
+
 @Mod.EventBusSubscriber(modid = BuildersConstruct.MOD_ID)
-public class AngelBuilderModifier extends NoLevelsModifier implements GeneralInteractionModifierHook {
+public record AngelBuilderModule(ModifierCondition<IToolStackView> condition) implements GeneralInteractionModifierHook, ModifierModule, ModifierCondition.ConditionalModule<IToolStackView> {
+    private static final List<ModuleHook<?>> DEFAULT_HOOKS = HookProvider.<AngelBuilderModule>defaultHooks(ModifierHooks.GENERAL_INTERACT);
+    public static final RecordLoadable<AngelBuilderModule> LOADER = RecordLoadable.create(
+            ModifierCondition.TOOL_FIELD,
+            AngelBuilderModule::new);
 
     @Override
-    protected void registerHooks(ModuleHookMap.Builder hookBuilder) {
-        super.registerHooks(hookBuilder);
-        hookBuilder.addHook(this, ModifierHooks.GENERAL_INTERACT);
+    public RecordLoadable<? extends GenericLoaderRegistry.IHaveLoader> getLoader() {
+        return LOADER;
     }
 
     @Override
-    public int getPriority() {
-        return 101; //Run before construction. They shouldn't overlap, but just in case
+    public List<ModuleHook<?>> getDefaultHooks() {
+        return DEFAULT_HOOKS;
+    }
+
+    @Override
+    public Integer getPriority() {
+        // run multipliers a bit later
+        return 101;
     }
 
     @Override
     public InteractionResult onToolUse(IToolStackView tool, ModifierEntry modifier, Player player, InteractionHand hand, InteractionSource source) {
         if (tool.isBroken()
-                || player.isCrouching()
+                //|| player.isCrouching()
                 || source != InteractionSource.RIGHT_CLICK
                 //|| !tool.getDefinitionData().getModule(ToolModuleHooks.INTERACTION).canInteract(tool, modifier.getId(), source)
                 || !(player.getOffhandItem().getItem() instanceof BlockItem blockItemToPlace))
@@ -66,8 +79,7 @@ public class AngelBuilderModifier extends NoLevelsModifier implements GeneralInt
         if (!player.level().isClientSide) {
             Vec2 rotVector = player.getRotationVector();
             Vec3 eyePos = player.getEyePosition();
-            double reach = player.getAttributeValue(ForgeMod.BLOCK_REACH.get());
-            Vec3 endRayCast = getEndRayCast(rotVector, eyePos, reach);
+            Vec3 endRayCast = getEndRayCast(rotVector, eyePos, player);
             HitResult hitResult = player.level().clip(new ClipContext(player.getEyePosition(), endRayCast, ClipContext.Block.OUTLINE, ClipContext.Fluid.ANY, null));
             if (hitResult.getType() == HitResult.Type.BLOCK)
                 return InteractionResult.PASS;
@@ -81,21 +93,22 @@ public class AngelBuilderModifier extends NoLevelsModifier implements GeneralInt
                 SoundType soundtype = placedState.getSoundType(player.level(), blockPlaceContext.getClickedPos(), player);
                 player.level().playSound(null, blockPlaceContext.getClickedPos(), placedState.getSoundType(player.level(), blockPlaceContext.getClickedPos(), player).getPlaceSound(), SoundSource.BLOCKS, (soundtype.getVolume() + 1.0F) / 2.0F, soundtype.getPitch() * 0.8F);
 
-                if (ToolDamageUtil.directDamage(tool, 20, player, player.getItemInHand(hand))) {
+                if (ToolDamageUtil.directDamage(tool, 20, player, player.getItemInHand(hand)))
                     player.broadcastBreakEvent(hand);
-                }
             }
         }
         return InteractionResult.sidedSuccess(player.level().isClientSide);
     }
 
-    private static Vec3 getEndRayCast(Vec2 rotation, Vec3 startingPos, double reach) {
+    private static Vec3 getEndRayCast(Vec2 rotation, Vec3 startingPos, Player player) {
         float yCos = Mth.cos((rotation.y + 90.0F) * ((float) Math.PI / 180F));
         float ySin = Mth.sin((rotation.y + 90.0F) * ((float) Math.PI / 180F));
         float xCos = Mth.cos(-rotation.x * ((float) Math.PI / 180F));
         float xSin = Mth.sin(-rotation.x * ((float) Math.PI / 180F));
         Vec3 forwardVec = new Vec3(yCos * xCos, xSin, ySin * xCos);
-        reach -= 1.5;
+        double reach = player.getBlockReach();
+        if (player.isCrouching())
+            reach *= 0.5d;
         double d0 = forwardVec.x * reach;
         double d1 = forwardVec.y * reach;
         double d2 = forwardVec.z * reach;
@@ -119,13 +132,13 @@ public class AngelBuilderModifier extends NoLevelsModifier implements GeneralInt
         if (stack.isBroken())
             return;
 
-        int angelBuilder = stack.getModifierLevel(BCModifiers.ANGEL_BUILDER.get());
+        int angelBuilder = 1;
+        //int angelBuilder = stack.getModifierLevel(BCModifiers.ANGEL_BUILDER.get());
         if (angelBuilder == 0)
             return;
         Vec2 rotVector = player.getRotationVector();
         Vec3 eyePos = player.getEyePosition();
-        double reach = player.getAttributeValue(ForgeMod.BLOCK_REACH.get());
-        Vec3 endRayCast = getEndRayCast(rotVector, eyePos, reach);
+        Vec3 endRayCast = getEndRayCast(rotVector, eyePos, player);
         HitResult hitResult = player.level().clip(new ClipContext(player.getEyePosition(), endRayCast, ClipContext.Block.OUTLINE, ClipContext.Fluid.ANY, null));
         if (hitResult.getType() == HitResult.Type.BLOCK)
             return;

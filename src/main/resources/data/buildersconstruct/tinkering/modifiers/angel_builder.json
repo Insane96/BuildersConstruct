@@ -1,0 +1,10 @@
+{
+    "level_display": "tconstruct:default",
+    "modules": [
+        {
+            "type": "buildersconstruct:angel_builder"
+        }
+    ],
+    "priority": 101,
+    "tooltip_display": "always"
+}

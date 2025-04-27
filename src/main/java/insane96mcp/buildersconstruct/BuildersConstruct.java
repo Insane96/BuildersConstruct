@@ -1,13 +1,11 @@
 package insane96mcp.buildersconstruct;
 
-import net.minecraft.data.DataGenerator;
-import net.minecraft.data.PackOutput;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.data.event.GatherDataEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import slimeknights.tconstruct.tools.TinkerModifiers;
 
 @Mod(BuildersConstruct.MOD_ID)
 public class BuildersConstruct
@@ -17,18 +15,12 @@ public class BuildersConstruct
 
     public BuildersConstruct(FMLJavaModLoadingContext context) {
         IEventBus bus = context.getModEventBus();
-        BCModifiers.MODIFIERS.register(bus);
+        bus.register(new TinkerModifiers());
 
         MinecraftForge.EVENT_BUS.register(this);
     }
 
-    @SubscribeEvent
-    public static void gatherData(GatherDataEvent event) {
-        DataGenerator generator = event.getGenerator();
-        PackOutput packOutput = generator.getPackOutput();
-        boolean server = event.includeServer();
-        if (event.includeServer()) {
-            generator.addProvider(server, new BCModifiers(packOutput));
-        }
+    public static ResourceLocation getResource(String id) {
+        return ResourceLocation.fromNamespaceAndPath(BuildersConstruct.MOD_ID, id);
     }
 }
