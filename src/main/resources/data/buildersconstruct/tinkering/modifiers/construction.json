@@ -1,0 +1,10 @@
+{
+    "level_display": "tconstruct:default",
+    "modules": [
+        {
+            "type": "buildersconstruct:construction"
+        }
+    ],
+    "priority": 100,
+    "tooltip_display": "always"
+}

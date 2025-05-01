@@ -86,7 +86,7 @@ public record AngelBuilderModule(ModifierCondition<IToolStackView> condition) im
             BlockPos pos = BlockPos.containing(endRayCast);
             if (!player.level().getBlockState(pos).canBeReplaced())
                 return InteractionResult.PASS;
-            BlockPlaceContext blockPlaceContext = new BlockPlaceContext(player, InteractionHand.OFF_HAND, player.getItemInHand(InteractionHand.OFF_HAND), ConstructionModifier.createBlockHitResult(endRayCast, player.getDirection(), pos));
+            BlockPlaceContext blockPlaceContext = new BlockPlaceContext(player, InteractionHand.OFF_HAND, player.getItemInHand(InteractionHand.OFF_HAND), ConstructionModule.createBlockHitResult(endRayCast, player.getDirection(), pos));
             InteractionResult interactionResult = blockItemToPlace.place(blockPlaceContext);
             if (interactionResult.consumesAction()) {
                 BlockState placedState = player.level().getBlockState(blockPlaceContext.getClickedPos());
@@ -132,7 +132,7 @@ public record AngelBuilderModule(ModifierCondition<IToolStackView> condition) im
         if (stack.isBroken())
             return;
 
-        int angelBuilder = 1;
+        int angelBuilder = 0;
         //int angelBuilder = stack.getModifierLevel(BCModifiers.ANGEL_BUILDER.get());
         if (angelBuilder == 0)
             return;

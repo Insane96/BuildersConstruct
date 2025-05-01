@@ -2,7 +2,6 @@ package insane96mcp.buildersconstruct.modifiers;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import insane96mcp.buildersconstruct.BCModifiers;
 import insane96mcp.buildersconstruct.BuildersConstruct;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -10,7 +9,6 @@ import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
@@ -36,15 +34,18 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 import slimeknights.mantle.client.TooltipKey;
+import slimeknights.mantle.data.loadable.record.RecordLoadable;
+import slimeknights.mantle.data.registry.GenericLoaderRegistry;
 import slimeknights.tconstruct.library.modifiers.ModifierEntry;
 import slimeknights.tconstruct.library.modifiers.ModifierHooks;
 import slimeknights.tconstruct.library.modifiers.hook.display.TooltipModifierHook;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.BlockInteractionModifierHook;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.GeneralInteractionModifierHook;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.InteractionSource;
-import slimeknights.tconstruct.library.modifiers.impl.NoLevelsModifier;
-import slimeknights.tconstruct.library.module.ModuleHookMap;
-import slimeknights.tconstruct.library.tools.definition.module.interaction.DualOptionInteraction;
+import slimeknights.tconstruct.library.modifiers.modules.ModifierModule;
+import slimeknights.tconstruct.library.modifiers.modules.util.ModifierCondition;
+import slimeknights.tconstruct.library.module.HookProvider;
+import slimeknights.tconstruct.library.module.ModuleHook;
 import slimeknights.tconstruct.library.tools.helper.ToolDamageUtil;
 import slimeknights.tconstruct.library.tools.item.ModifiableItem;
 import slimeknights.tconstruct.library.tools.nbt.IToolStackView;
@@ -54,18 +55,23 @@ import slimeknights.tconstruct.tools.TinkerModifiers;
 import java.util.*;
 
 @Mod.EventBusSubscriber(modid = BuildersConstruct.MOD_ID)
-public class ConstructionModifier extends NoLevelsModifier implements BlockInteractionModifierHook, GeneralInteractionModifierHook, TooltipModifierHook {
+public record ConstructionModule(ModifierCondition<IToolStackView> condition) implements BlockInteractionModifierHook, GeneralInteractionModifierHook, TooltipModifierHook, ModifierModule, ModifierCondition.ConditionalModule<IToolStackView> {
+    private static final List<ModuleHook<?>> DEFAULT_HOOKS = HookProvider.<ConstructionModule>defaultHooks(ModifierHooks.GENERAL_INTERACT, ModifierHooks.BLOCK_INTERACT, ModifierHooks.TOOLTIP);
+    public static final RecordLoadable<ConstructionModule> LOADER = RecordLoadable.create(
+            ModifierCondition.TOOL_FIELD,
+            ConstructionModule::new);
 
     private static final ResourceLocation MODE = ResourceLocation.fromNamespaceAndPath(BuildersConstruct.MOD_ID, "construction_mode");
 
     private static Map<Direction, List<Direction>> DIRECTION_CLOCKWISE;
 
     @Override
-    protected void registerHooks(ModuleHookMap.Builder hookBuilder) {
-        super.registerHooks(hookBuilder);
-        hookBuilder.addHook(this, ModifierHooks.BLOCK_INTERACT, ModifierHooks.GENERAL_INTERACT);
-        hookBuilder.addHook(this, ModifierHooks.TOOLTIP);
+    public RecordLoadable<? extends GenericLoaderRegistry.IHaveLoader> getLoader() {
+        return LOADER;
+    }
 
+    @Override
+    public List<ModuleHook<?>> getDefaultHooks() {
         DIRECTION_CLOCKWISE = new EnumMap<>(Direction.class);
         DIRECTION_CLOCKWISE.put(Direction.UP, Arrays.asList(Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST));
         DIRECTION_CLOCKWISE.put(Direction.DOWN, Arrays.asList(Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST));
@@ -73,6 +79,14 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         DIRECTION_CLOCKWISE.put(Direction.SOUTH, Arrays.asList(Direction.UP, Direction.EAST, Direction.DOWN, Direction.WEST));
         DIRECTION_CLOCKWISE.put(Direction.EAST, Arrays.asList(Direction.UP, Direction.NORTH, Direction.DOWN, Direction.SOUTH));
         DIRECTION_CLOCKWISE.put(Direction.WEST, Arrays.asList(Direction.UP, Direction.NORTH, Direction.DOWN, Direction.SOUTH));
+
+        return DEFAULT_HOOKS;
+    }
+
+    @Override
+    public Integer getPriority() {
+        // run multipliers a bit later
+        return 101;
     }
 
     public void nextMode(IToolStackView tool) {
@@ -89,11 +103,6 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
 
     public void setMode(IToolStackView tool, Mode mode) {
         tool.getPersistentData().putInt(MODE, mode.ordinal());
-    }
-
-    @Override
-    public Component getDisplayName(IToolStackView tool, ModifierEntry entry, @Nullable RegistryAccess access) {
-        return DualOptionInteraction.formatModifierName(tool, this, super.getDisplayName(entry.getLevel()));
     }
 
     @Override
@@ -182,7 +191,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
             return InteractionResult.PASS;
 
         this.nextMode(tool);
-        player.displayClientMessage(Component.translatable(getTranslationKey() + ".mode_switch", this.getMode(tool)), true);
+        //player.displayClientMessage(Component.translatable(getTranslationKey() + ".mode_switch", this.getMode(tool)), true);
         return InteractionResult.sidedSuccess(player.level().isClientSide);
     }
 
@@ -195,7 +204,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
     }
 
     private static int placeableAmount(int lvl) {
-        return (int) Math.pow(2, lvl + 2);
+        return (int) Math.pow(2, lvl + 3);
     }
 
     public static List<BlockPos> getBlocksToLay(Level level, BlockPos mainPos, BlockState stateToPlace, boolean requireSameState, Direction face, Direction playerFacing, int expandedLevel, Mode mode) {
@@ -270,7 +279,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
 
     public static boolean isValidPosition(Level level, BlockPos pos, Direction face, BlockState state, boolean requireSameState) {
         return ((requireSameState && level.getBlockState(pos).equals(state))
-                    || (!requireSameState && level.getBlockState(pos).canOcclude()))
+                || (!requireSameState && level.getBlockState(pos).canOcclude()))
                 && level.getBlockState(pos.relative(face)).canBeReplaced()
                 && !level.isOutsideBuildHeight(pos.relative(face));
     }
@@ -291,7 +300,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
             stack = ToolStack.from(player.getOffhandItem());
         else return;
 
-        int construction = stack.getModifierLevel(BCModifiers.CONSTRUCTION.get());
+        int construction = 1; // stack.getModifierLevel(BCModifiers.CONSTRUCTION.get());
         if (construction == 0)
             return;
         int expandedLevel = stack.getModifierLevel(TinkerModifiers.expanded.get());
@@ -322,12 +331,6 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
         event.getPoseStack().translate(-cam.x, -cam.y, -cam.z);
         for (BlockPos blockPos : blocksToPlace) {
             blockPos = blockPos.relative(face);
-            /*event.getPoseStack().pushPose();
-            event.getPoseStack().translate(blockPos.getX() + 0.5d, blockPos.getY() + 0.5d, blockPos.getZ() + 0.5d);
-            //event.getPoseStack().mulPose(face.getRotation());
-            BakedModel model = itemRenderer.getItemModelShaper().getItemModel(blockStack);
-            itemRenderer.render(blockStack, ItemTransforms.TransformType.NONE, false, event.getPoseStack(), Minecraft.getInstance().renderBuffers().bufferSource(), LevelRenderer.getLightColor(level, blockPos), OverlayTexture.NO_WHITE_U, model);
-            event.getPoseStack().popPose();*/
             LevelRenderer.renderShape(event.getPoseStack(), vertexBuilder, Shapes.block(), blockPos.getX(), blockPos.getY(), blockPos.getZ(), 1f, 0.2f, 0.2f, 0.5f);
         }
         event.getPoseStack().popPose();
@@ -337,7 +340,7 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
 
     @Override
     public void addTooltip(IToolStackView tool, ModifierEntry modifier, @Nullable Player player, List<Component> tooltip, TooltipKey tooltipKey, TooltipFlag tooltipFlag) {
-        tooltip.add(applyStyle(Component.translatable(getTranslationKey() + ".blocks_placed", placeableAmount(modifier.getLevel()))));
-        tooltip.add(applyStyle(Component.translatable(getTranslationKey() + ".mode", this.getMode(tool))));
+        /*tooltip.add(Component.translatable(getTranslationKey() + ".blocks_placed", placeableAmount(modifier.getLevel())).withStyle(ResourceColorManager.getTextColor(getTranslationKey())));
+        tooltip.add(Component.translatable(getTranslationKey() + ".mode", this.getMode(tool)).withStyle(ResourceColorManager.getTextColor(getTranslationKey()));*/
     }
 }

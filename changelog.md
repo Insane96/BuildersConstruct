@@ -4,6 +4,10 @@
 * Check shulker boxes for items to place
 * Place random blocks in the hot bar like a Quark Trowel
 
+## Upcoming
+* Construction
+  * Increased amount of blocks placed (`2^expanded_level + 2` -> `2^expanded_level + 3`)
+
 ## 1.3.1
 * Fixed requiring tconstruct version not yet released
 
