@@ -31,6 +31,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
 import slimeknights.mantle.data.registry.GenericLoaderRegistry;
+import slimeknights.tconstruct.library.json.LevelingInt;
 import slimeknights.tconstruct.library.modifiers.ModifierEntry;
 import slimeknights.tconstruct.library.modifiers.ModifierHooks;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.GeneralInteractionModifierHook;
@@ -48,9 +49,10 @@ import slimeknights.tconstruct.library.tools.nbt.ToolStack;
 import java.util.List;
 
 @Mod.EventBusSubscriber(modid = BuildersConstruct.MOD_ID)
-public record AngelBuilderModule(ModifierCondition<IToolStackView> condition) implements GeneralInteractionModifierHook, ModifierModule, ModifierCondition.ConditionalModule<IToolStackView> {
+public record AngelBuilderModule(LevelingInt durabilityConsumed, ModifierCondition<IToolStackView> condition) implements GeneralInteractionModifierHook, ModifierModule, ModifierCondition.ConditionalModule<IToolStackView> {
     private static final List<ModuleHook<?>> DEFAULT_HOOKS = HookProvider.<AngelBuilderModule>defaultHooks(ModifierHooks.GENERAL_INTERACT);
     public static final RecordLoadable<AngelBuilderModule> LOADER = RecordLoadable.create(
+            LevelingInt.LOADABLE.requiredField("durability_consumed", AngelBuilderModule::durabilityConsumed),
             ModifierCondition.TOOL_FIELD,
             AngelBuilderModule::new);
 
@@ -96,7 +98,7 @@ public record AngelBuilderModule(ModifierCondition<IToolStackView> condition) im
                 SoundType soundtype = placedState.getSoundType(player.level(), blockPlaceContext.getClickedPos(), player);
                 player.level().playSound(null, blockPlaceContext.getClickedPos(), placedState.getSoundType(player.level(), blockPlaceContext.getClickedPos(), player).getPlaceSound(), SoundSource.BLOCKS, (soundtype.getVolume() + 1.0F) / 2.0F, soundtype.getPitch() * 0.8F);
 
-                if (ToolDamageUtil.directDamage(tool, 20, player, player.getItemInHand(hand)))
+                if (ToolDamageUtil.directDamage(tool, durabilityConsumed.compute(modifier.getLevel()), player, player.getItemInHand(hand)))
                     player.broadcastBreakEvent(hand);
             }
         }

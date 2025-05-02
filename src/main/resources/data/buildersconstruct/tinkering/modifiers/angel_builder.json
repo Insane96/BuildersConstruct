@@ -2,7 +2,10 @@
     "level_display": "tconstruct:default",
     "modules": [
         {
-            "type": "buildersconstruct:angel_builder"
+            "type": "buildersconstruct:angel_builder",
+            "durability_consumed": {
+                "flat": 20
+            }
         }
     ],
     "priority": 101,

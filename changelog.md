@@ -5,8 +5,12 @@
 * Place random blocks in the hot bar like a Quark Trowel
 
 ## Upcoming
+* Modifiers are now customizable through Data Packs
+  * Angel Builder
+    * `durability_consumed`: How much durability the tool consumes per block placed (bypasses modifiers)
 * Construction
   * Increased amount of blocks placed (`2^expanded_level + 2` -> `2^expanded_level + 3`)
+* Angel Builder range is now the same as player range and it's now halved when sneaking.
 
 ## 1.3.1
 * Fixed requiring tconstruct version not yet released
