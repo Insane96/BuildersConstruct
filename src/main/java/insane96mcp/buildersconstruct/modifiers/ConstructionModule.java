@@ -2,6 +2,7 @@ package insane96mcp.buildersconstruct.modifiers;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import insane96mcp.buildersconstruct.BCModifiers;
 import insane96mcp.buildersconstruct.BuildersConstruct;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -18,6 +19,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
@@ -46,6 +48,7 @@ import slimeknights.tconstruct.library.modifiers.modules.ModifierModule;
 import slimeknights.tconstruct.library.modifiers.modules.util.ModifierCondition;
 import slimeknights.tconstruct.library.module.HookProvider;
 import slimeknights.tconstruct.library.module.ModuleHook;
+import slimeknights.tconstruct.library.tools.helper.ModifierUtil;
 import slimeknights.tconstruct.library.tools.helper.ToolDamageUtil;
 import slimeknights.tconstruct.library.tools.item.ModifiableItem;
 import slimeknights.tconstruct.library.tools.nbt.IToolStackView;
@@ -293,17 +296,17 @@ public record ConstructionModule(ModifierCondition<IToolStackView> condition) im
                 || Minecraft.getInstance().hitResult.getType() != HitResult.Type.BLOCK)
             return;
 
-        ToolStack stack;
+        ItemStack stack;
         if (player.getMainHandItem().getItem() instanceof ModifiableItem)
-            stack = ToolStack.from(player.getMainHandItem());
+            stack = player.getMainHandItem();
         else if (player.getOffhandItem().getItem() instanceof ModifiableItem)
-            stack = ToolStack.from(player.getOffhandItem());
+            stack = player.getOffhandItem();
         else return;
 
-        int construction = 1; // stack.getModifierLevel(BCModifiers.CONSTRUCTION.get());
+        int construction = ModifierUtil.getModifierLevel(stack, BCModifiers.CONSTRUCTION);
         if (construction == 0)
             return;
-        int expandedLevel = stack.getModifierLevel(TinkerModifiers.expanded.get());
+        int expandedLevel = ModifierUtil.getModifierLevel(stack, TinkerModifiers.expanded.get().getId());
 
         Level level = player.level();
         BlockHitResult blockhitresult = (BlockHitResult) Minecraft.getInstance().hitResult;
@@ -321,7 +324,7 @@ public record ConstructionModule(ModifierCondition<IToolStackView> condition) im
             blockStack = player.getOffhandItem();*/
         if (!level.getBlockState(pos.relative(face)).canBeReplaced())
             return;
-        List<BlockPos> blocksToPlace = getBlocksToLay(level, pos, state, !(player.getOffhandItem().getItem() instanceof BlockItem), face, player.getDirection(), expandedLevel, Mode.values[stack.getPersistentData().getInt(MODE)]);
+        List<BlockPos> blocksToPlace = getBlocksToLay(level, pos, state, !(player.getOffhandItem().getItem() instanceof BlockItem), face, player.getDirection(), expandedLevel, Mode.values[ToolStack.from(stack).getPersistentData().getInt(MODE)]);
         if (blocksToPlace.isEmpty())
             return;
         VertexConsumer vertexBuilder = Minecraft.getInstance().renderBuffers().bufferSource().getBuffer(RenderType.LINES);

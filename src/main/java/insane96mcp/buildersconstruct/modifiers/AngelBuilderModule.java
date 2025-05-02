@@ -2,6 +2,7 @@ package insane96mcp.buildersconstruct.modifiers;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import insane96mcp.buildersconstruct.BCModifiers;
 import insane96mcp.buildersconstruct.BuildersConstruct;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -14,6 +15,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.SoundType;
@@ -37,6 +39,7 @@ import slimeknights.tconstruct.library.modifiers.modules.ModifierModule;
 import slimeknights.tconstruct.library.modifiers.modules.util.ModifierCondition;
 import slimeknights.tconstruct.library.module.HookProvider;
 import slimeknights.tconstruct.library.module.ModuleHook;
+import slimeknights.tconstruct.library.tools.helper.ModifierUtil;
 import slimeknights.tconstruct.library.tools.helper.ToolDamageUtil;
 import slimeknights.tconstruct.library.tools.item.ModifiableItem;
 import slimeknights.tconstruct.library.tools.nbt.IToolStackView;
@@ -122,18 +125,17 @@ public record AngelBuilderModule(ModifierCondition<IToolStackView> condition) im
                 || !(event.getCamera().getEntity() instanceof LocalPlayer player))
             return;
 
-        ToolStack stack;
+        ItemStack stack;
         if (player.getMainHandItem().getItem() instanceof ModifiableItem)
-            stack = ToolStack.from(player.getMainHandItem());
+            stack = player.getMainHandItem();
         else if (player.getOffhandItem().getItem() instanceof ModifiableItem)
-            stack = ToolStack.from(player.getOffhandItem());
+            stack = player.getOffhandItem();
         else return;
 
-        if (stack.isBroken())
+        if (ToolStack.from(stack).isBroken())
             return;
 
-        int angelBuilder = 0;
-        //int angelBuilder = stack.getModifierLevel(BCModifiers.ANGEL_BUILDER.get());
+        int angelBuilder = ModifierUtil.getModifierLevel(stack, BCModifiers.ANGEL_BUILDER);
         if (angelBuilder == 0)
             return;
         Vec2 rotVector = player.getRotationVector();
