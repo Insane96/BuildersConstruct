@@ -16,6 +16,10 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.RangedAttribute;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -34,12 +38,16 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.Nullable;
 import slimeknights.mantle.client.TooltipKey;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
 import slimeknights.mantle.data.registry.GenericLoaderRegistry;
+import slimeknights.tconstruct.library.json.math.FormulaLoadable;
+import slimeknights.tconstruct.library.json.math.ModifierFormula;
 import slimeknights.tconstruct.library.modifiers.ModifierEntry;
 import slimeknights.tconstruct.library.modifiers.ModifierHooks;
+import slimeknights.tconstruct.library.modifiers.hook.behavior.AttributesModifierHook;
 import slimeknights.tconstruct.library.modifiers.hook.display.TooltipModifierHook;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.BlockInteractionModifierHook;
 import slimeknights.tconstruct.library.modifiers.hook.interaction.GeneralInteractionModifierHook;
@@ -56,12 +64,19 @@ import slimeknights.tconstruct.library.tools.nbt.ToolStack;
 import slimeknights.tconstruct.tools.TinkerModifiers;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 
 @Mod.EventBusSubscriber(modid = BuildersConstruct.MOD_ID)
-public record ConstructionModule(ModifierCondition<IToolStackView> condition) implements BlockInteractionModifierHook, GeneralInteractionModifierHook, TooltipModifierHook, ModifierModule, ModifierCondition.ConditionalModule<IToolStackView> {
+public record ConstructionModule(ModifierFormula blocksPlaced, ModifierCondition<IToolStackView> condition) implements BlockInteractionModifierHook, GeneralInteractionModifierHook, TooltipModifierHook, AttributesModifierHook, ModifierModule, ModifierCondition.ConditionalModule<IToolStackView> {
+
+    public static final RegistryObject<Attribute> BLOCKS_PLACED = BuildersConstruct.ATTRIBUTES.register("blocks_placed", () -> new RangedAttribute("attribute.name.buildersconstruct:blocks_placed", 0d, 0d, Double.MAX_VALUE));
+
     private static final List<ModuleHook<?>> DEFAULT_HOOKS = HookProvider.<ConstructionModule>defaultHooks(ModifierHooks.GENERAL_INTERACT, ModifierHooks.BLOCK_INTERACT, ModifierHooks.TOOLTIP);
+    /** Setup for the formula */
+    private static final FormulaLoadable FORMULA = new FormulaLoadable(ModifierFormula.FallbackFormula.BOOST, "level", "expanded_level");
     public static final RecordLoadable<ConstructionModule> LOADER = RecordLoadable.create(
-            ModifierCondition.TOOL_FIELD,
+            FORMULA.requiredField("blocks_placed", ConstructionModule::blocksPlaced),
+            slimeknights.tconstruct.library.modifiers.modules.util.ModifierCondition.TOOL_FIELD,
             ConstructionModule::new);
 
     private static final ResourceLocation MODE = ResourceLocation.fromNamespaceAndPath(BuildersConstruct.MOD_ID, "construction_mode");
@@ -155,7 +170,7 @@ public record ConstructionModule(ModifierCondition<IToolStackView> condition) im
                 return InteractionResult.PASS;
 
             int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
-            List<BlockPos> blocksToPlace = getBlocksToLay(level, mainPos, stateToPlace, !offHandBlockPlacing, face, player.getDirection(), expandedLevel, this.getMode(tool));
+            List<BlockPos> blocksToPlace = getBlocksToLay(level, mainPos, stateToPlace, !offHandBlockPlacing, face, player.getDirection(), player, this.getMode(tool));
             int placed = 0;
             for (BlockPos pos : blocksToPlace) {
                 pos = pos.relative(face);
@@ -179,7 +194,7 @@ public record ConstructionModule(ModifierCondition<IToolStackView> condition) im
             if (ToolDamageUtil.damage(tool, blocksToPlace.size(), player, context.getItemInHand())) {
                 player.broadcastBreakEvent(source.getSlot(context.getHand()));
             }
-            level.playSound(null, mainPos, ((BlockItem)blockItemToPlace).getBlock().defaultBlockState().getSoundType(level, mainPos, player).getPlaceSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
+            level.playSound(null, mainPos, ((BlockItem) blockItemToPlace).getBlock().defaultBlockState().getSoundType(level, mainPos, player).getPlaceSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
         }
 
         return InteractionResult.sidedSuccess(context.getLevel().isClientSide);
@@ -194,8 +209,17 @@ public record ConstructionModule(ModifierCondition<IToolStackView> condition) im
             return InteractionResult.PASS;
 
         this.nextMode(tool);
-        //player.displayClientMessage(Component.translatable(getTranslationKey() + ".mode_switch", this.getMode(tool)), true);
+        player.displayClientMessage(modifier.getModifier().applyStyle(Component.translatable(modifier.getModifier().getTranslationKey() + ".mode_switch", this.getMode(tool))), true);
         return InteractionResult.sidedSuccess(player.level().isClientSide);
+    }
+
+    @Override
+    public void addAttributes(IToolStackView tool, ModifierEntry modifier, EquipmentSlot slot, BiConsumer<Attribute, AttributeModifier> consumer) {
+        consumer.accept(BLOCKS_PLACED.get(),
+                new AttributeModifier(UUID.fromString("982c9f4c-4763-4b91-9483-66df04e881c7"),
+                        "construction_modifier",
+                        placeableAmount(modifier.getLevel(), tool.getModifierLevel(TinkerModifiers.expanded.get())),
+                        AttributeModifier.Operation.ADDITION));
     }
 
     public enum Mode {
@@ -206,12 +230,12 @@ public record ConstructionModule(ModifierCondition<IToolStackView> condition) im
         public static final Mode[] values = Mode.values();
     }
 
-    private static int placeableAmount(int lvl) {
-        return (int) Math.pow(2, lvl + 3);
+    private int placeableAmount(int lvl, int expandedLevel) {
+        return (int) blocksPlaced.apply(lvl, expandedLevel);
     }
 
-    public static List<BlockPos> getBlocksToLay(Level level, BlockPos mainPos, BlockState stateToPlace, boolean requireSameState, Direction face, Direction playerFacing, int expandedLevel, Mode mode) {
-        int placeableAmount = placeableAmount(expandedLevel);
+    public static List<BlockPos> getBlocksToLay(Level level, BlockPos mainPos, BlockState stateToPlace, boolean requireSameState, Direction face, Direction playerFacing, Player player, Mode mode) {
+        int placeableAmount = (int) player.getAttributeValue(BLOCKS_PLACED.get());
         List<BlockPos> toCheck = new ArrayList<>();
         toCheck.add(mainPos);
 
@@ -324,7 +348,7 @@ public record ConstructionModule(ModifierCondition<IToolStackView> condition) im
             blockStack = player.getOffhandItem();*/
         if (!level.getBlockState(pos.relative(face)).canBeReplaced())
             return;
-        List<BlockPos> blocksToPlace = getBlocksToLay(level, pos, state, !(player.getOffhandItem().getItem() instanceof BlockItem), face, player.getDirection(), expandedLevel, Mode.values[ToolStack.from(stack).getPersistentData().getInt(MODE)]);
+        List<BlockPos> blocksToPlace = getBlocksToLay(level, pos, state, !(player.getOffhandItem().getItem() instanceof BlockItem), face, player.getDirection(), player, Mode.values[ToolStack.from(stack).getPersistentData().getInt(MODE)]);
         if (blocksToPlace.isEmpty())
             return;
         VertexConsumer vertexBuilder = Minecraft.getInstance().renderBuffers().bufferSource().getBuffer(RenderType.LINES);
@@ -343,7 +367,7 @@ public record ConstructionModule(ModifierCondition<IToolStackView> condition) im
 
     @Override
     public void addTooltip(IToolStackView tool, ModifierEntry modifier, @Nullable Player player, List<Component> tooltip, TooltipKey tooltipKey, TooltipFlag tooltipFlag) {
-        /*tooltip.add(Component.translatable(getTranslationKey() + ".blocks_placed", placeableAmount(modifier.getLevel())).withStyle(ResourceColorManager.getTextColor(getTranslationKey())));
-        tooltip.add(Component.translatable(getTranslationKey() + ".mode", this.getMode(tool)).withStyle(ResourceColorManager.getTextColor(getTranslationKey()));*/
+        tooltip.add(modifier.getModifier().applyStyle(Component.translatable(modifier.getModifier().getTranslationKey() + ".blocks_placed", placeableAmount(modifier.getLevel(), tool.getModifierLevel(TinkerModifiers.expanded.get())))));
+        tooltip.add(modifier.getModifier().applyStyle(Component.translatable(modifier.getModifier().getTranslationKey() + ".mode", this.getMode(tool))));
     }
 }

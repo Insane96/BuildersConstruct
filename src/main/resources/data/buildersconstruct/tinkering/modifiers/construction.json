@@ -2,7 +2,14 @@
     "level_display": "tconstruct:default",
     "modules": [
         {
-            "type": "buildersconstruct:construction"
+            "type": "buildersconstruct:construction",
+            "blocks_placed": [
+                "2",
+                "$expanded_level",
+                "3",
+                "+",
+                "^"
+            ]
         }
     ],
     "priority": 100,

@@ -8,5 +8,7 @@
 
     "modifier.buildersconstruct.angel_builder": "Angel Builder",
     "modifier.buildersconstruct.angel_builder.flavor": "Quite useful when flying",
-    "modifier.buildersconstruct.angel_builder.description": "Place blocks in mid-air."
+    "modifier.buildersconstruct.angel_builder.description": "Place blocks in mid-air.",
+
+    "attribute.name.buildersconstruct:blocks_placed": "Blocks Placed"
 }
