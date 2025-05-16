@@ -4,9 +4,9 @@
         {
             "type": "buildersconstruct:construction",
             "blocks_placed": [
-                "2",
+                2,
                 "$expanded_level",
-                "3",
+                3,
                 "+",
                 "^"
             ]
