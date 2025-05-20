@@ -1,0 +1,12 @@
+{
+    "modifier_id": "buildersconstruct:angel_builder",
+    "text": [
+        {
+            "text": "Place blocks in mid-air from the off-hand. Sneaking reduces the range."
+        }
+    ],
+    "effects": [
+        "Maximum of 1 level",
+        "Requires 1 ability slot"
+    ]
+}
