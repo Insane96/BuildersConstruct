@@ -337,7 +337,8 @@ public class ConstructionModifier extends NoLevelsModifier implements BlockInter
 
     @Override
     public void addTooltip(IToolStackView tool, ModifierEntry modifier, @Nullable Player player, List<Component> tooltip, TooltipKey tooltipKey, TooltipFlag tooltipFlag) {
-        tooltip.add(applyStyle(Component.translatable(getTranslationKey() + ".blocks_placed", placeableAmount(modifier.getLevel()))));
+        int expandedLevel = tool.getModifierLevel(TinkerModifiers.expanded.get());
+        tooltip.add(applyStyle(Component.translatable(getTranslationKey() + ".blocks_placed", placeableAmount(expandedLevel))));
         tooltip.add(applyStyle(Component.translatable(getTranslationKey() + ".mode", this.getMode(tool))));
     }
 }
